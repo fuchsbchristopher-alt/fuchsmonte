@@ -636,6 +636,180 @@ function processFile(file) {
   } else toast('Use .csv or .xlsx files');
 }
 
+
+// ═══════════════════════════════════════════
+// FLOOD ZONE CHECK — FEMA National Flood Hazard Layer API
+// Free, no key needed, works for all US addresses
+// ═══════════════════════════════════════════
+async function checkFloodZone(lat, lng) {
+  try {
+    const url = `https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FLD_ZONE,ZONE_SUBTY&returnGeometry=false&f=json`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.features && data.features.length > 0) {
+      const zone = data.features[0].attributes.FLD_ZONE || 'Unknown';
+      return zone;
+    }
+    return 'X'; // Default to X if no data found
+  } catch(e) {
+    console.warn('Flood zone check failed:', e);
+    return null; // null means unknown
+  }
+}
+
+// ═══════════════════════════════════════════
+// PROTECTED SPECIES CHECK — USFWS Critical Habitat API
+// Free public API from US Fish & Wildlife Service
+// ═══════════════════════════════════════════
+async function checkProtectedSpecies(lat, lng) {
+  try {
+    // Check USFWS Critical Habitat layer
+    const url = `https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/USFWS_Critical_Habitat/FeatureServer/1/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=comname,sciname&returnGeometry=false&f=json`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.features && data.features.length > 0) {
+      const species = data.features.map(f => f.attributes.comname).filter(Boolean);
+      return { hasSpecies: true, species: species };
+    }
+    return { hasSpecies: false, species: [] };
+  } catch(e) {
+    console.warn('Species check failed:', e);
+    return null; // null means unknown
+  }
+}
+
+// ═══════════════════════════════════════════
+// GEOCODE ADDRESS — Census Geocoder (free, no key)
+// Converts address to lat/lng for API calls
+// ═══════════════════════════════════════════
+async function geocodeAddress(address) {
+  try {
+    const encoded = encodeURIComponent(address);
+    const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encoded}&benchmark=Public_AR_Current&format=json`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.result && data.result.addressMatches && data.result.addressMatches.length > 0) {
+      const coords = data.result.addressMatches[0].coordinates;
+      return { lat: coords.y, lng: coords.x };
+    }
+    return null;
+  } catch(e) {
+    console.warn('Geocoding failed:', e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════
+// FULL LEAD QUALIFIER
+// Runs flood zone + species check on a single lead
+// Updates the lead's q array and score in place
+// ═══════════════════════════════════════════
+async function runApiChecks(lead) {
+  // Show checking indicator
+  const checkingMsg = `Checking ${lead.addr}...`;
+  console.log('[API Check]', checkingMsg);
+
+  // Geocode the address
+  const coords = await geocodeAddress(lead.addr);
+  if (!coords) {
+    console.warn('[API Check] Could not geocode:', lead.addr);
+    return lead; // Return unchanged if geocoding fails
+  }
+
+  const { lat, lng } = coords;
+  const results = { floodZone: null, species: null };
+
+  // Run both checks in parallel
+  const [floodZone, speciesResult] = await Promise.all([
+    checkFloodZone(lat, lng),
+    checkProtectedSpecies(lat, lng)
+  ]);
+
+  results.floodZone = floodZone;
+  results.species = speciesResult;
+
+  // Update qualification array
+  // q = [Zone X, Zoning, No species, No main rd, Canal ok, Zip ok]
+  const newQ = [...(lead.q || [1,1,1,1,1,1])];
+
+  // Index 0 = Flood Zone X
+  if (floodZone !== null) {
+    newQ[0] = (floodZone === 'X' || floodZone === 'X500') ? 1 : 0;
+  }
+
+  // Index 2 = No protected species
+  if (speciesResult !== null) {
+    newQ[2] = speciesResult.hasSpecies ? 0 : 1;
+  }
+
+  // Recalculate score
+  const qSum = newQ.reduce((a,b) => a+b, 0);
+  const score = qSum === 6 ? 'A' : qSum >= 4 ? 'B' : 'C';
+
+  // Build flags
+  const flags = [...(lead.flags || [])].filter(f => !f.includes('Flood') && !f.includes('species'));
+  if (floodZone && floodZone !== 'X' && floodZone !== 'X500') {
+    flags.push(`Flood Zone ${floodZone} — not Zone X`);
+  }
+  if (speciesResult && speciesResult.hasSpecies) {
+    flags.push(`Protected species: ${speciesResult.species.slice(0,2).join(', ')}`);
+  }
+
+  return {
+    ...lead,
+    q: newQ,
+    score: score,
+    flags: flags,
+    floodZone: floodZone,
+    speciesChecked: true,
+    apiCheckedAt: new Date().toISOString(),
+  };
+}
+
+// ═══════════════════════════════════════════
+// BATCH CHECK ALL UNCHECKED LEADS
+// Runs API checks on leads that haven't been
+// verified yet (runs in background after import)
+// ═══════════════════════════════════════════
+async function runBatchApiChecks() {
+  const unchecked = leads.filter(l => !l.speciesChecked && !l.apiCheckedAt);
+  if (unchecked.length === 0) return;
+
+  const bar = document.getElementById('agent-msg');
+  if (bar) bar.textContent = `Checking flood zones & protected species for ${unchecked.length} leads...`;
+
+  let checked = 0;
+  for (const lead of unchecked) {
+    try {
+      const updated = await runApiChecks(lead);
+      const idx = leads.findIndex(l => l.id === lead.id);
+      if (idx >= 0) leads[idx] = updated;
+      checked++;
+
+      // Update progress
+      const pct = Math.round((checked / unchecked.length) * 100);
+      if (bar) bar.textContent = `Checking flood zones & species... ${checked}/${unchecked.length} (${pct}%)`;
+
+      // Render every 5 leads to show progress
+      if (checked % 5 === 0) {
+        renderPipeline();
+        await persist();
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 200));
+    } catch(e) {
+      console.warn('API check failed for', lead.addr, e);
+    }
+  }
+
+  // Final save and render
+  await persist();
+  renderPipeline();
+  if (bar) bar.textContent = `✓ Flood zone & species checks complete for ${checked} leads`;
+  toast(checked + ' leads verified — flood zone & species updated', true);
+}
+
 function importRows(rows, fileName) {
   if(!rows.length){toast('File appears empty');return;}
   const existing = new Set(leads.map(l=>l.rawAddr.toLowerCase()));
@@ -655,7 +829,9 @@ function importRows(rows, fileName) {
     `<strong>${added} leads imported</strong> from ${fileName} · ${skipped} duplicates skipped · <strong style="color:var(--green)">${qA} qualify (A score)</strong>`;
   document.getElementById('sync-info').textContent=leads.length+' leads';
   renderPipeline(); buildTerNav();
-  toast(added+' leads imported — '+qA+' qualified',true);
+  toast(added+' leads imported — '+qA+' qualified. Checking flood zones & species...',true);
+  // Run API checks in background after import
+  setTimeout(() => runBatchApiChecks(), 1000);
 }
 
 // ═══════════════════════════════════════════
@@ -832,6 +1008,7 @@ function renderDetail() {
         <option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
       </select>
       <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
+      <button class="btn btn-sm btn-green" onclick="runApiChecks(leads.find(x=>String(x.id)===String('${l.id}'))).then(updated=>{const idx=leads.findIndex(x=>String(x.id)===String('${l.id}'));if(idx>=0){leads[idx]=updated;persist();renderPipeline();}toast('Flood zone & species updated',true);})" style="font-size:11px">&#9679; Re-check</button>
     </div>
   </div>`;
 }
