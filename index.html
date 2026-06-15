@@ -457,6 +457,8 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
 <div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
 
 <script>
+const SUPABASE_URL = 'https://wsezvjbsxzyunqebkrng.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_hFrsbBRvankorzlt0Jc_8w_c63-B6pV';
 // ═══════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════
@@ -488,48 +490,57 @@ async function persist() {
     buyers_manual: buyers.filter(b => b.manual),
     savedAt: new Date().toISOString(),
   };
+  // Save to Supabase
   try {
-    if (window.storage) {
-      await window.storage.set('fuchsmonte_data', JSON.stringify(data));
-    } else {
-      localStorage.setItem('fuchsmonte_data', JSON.stringify(data));
-    }
-  } catch(e) {
-    try { localStorage.setItem('fuchsmonte_data', JSON.stringify(data)); } catch(e2) {}
-  }
+    await fetch(SUPABASE_URL + '/rest/v1/fm_data', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ id: 'main', leads: data.leads, buyers_manual: data.buyers_manual, updated_at: new Date().toISOString() })
+    });
+  } catch(e) { console.error('Supabase save error:', e); }
+  // Also save locally as backup
+  try { localStorage.setItem('fm_backup', JSON.stringify(data)); } catch(e) {}
+  const el = document.getElementById('sync-info');
+  if (el) el.textContent = leads.length + ' leads · saved ' + new Date().toLocaleTimeString();
 }
 
 async function hydrate() {
   let data = null;
+  // Try Supabase first
   try {
-    if (window.storage) {
-      const result = await window.storage.get('fuchsmonte_data');
-      if (result && result.value) data = JSON.parse(result.value);
-    }
-  } catch(e) {}
-  // Fallback to localStorage
+    const r = await fetch(SUPABASE_URL + '/rest/v1/fm_data?id=eq.main&select=*', {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    const rows = await r.json();
+    if (rows && rows[0] && rows[0].leads) data = rows[0];
+  } catch(e) { console.error('Supabase load error:', e); }
+  // Fallback to localStorage backup
   if (!data) {
     try {
-      const raw = localStorage.getItem('fuchsmonte_data') || localStorage.getItem('fm_leads');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // Handle old format (just leads array) or new format (object with leads key)
-        data = Array.isArray(parsed) ? { leads: parsed, buyers_manual: [] } : parsed;
-      }
+      const raw = localStorage.getItem('fm_backup') || localStorage.getItem('fuchsmonte_data') || localStorage.getItem('fm_leads');
+      if (raw) { const p = JSON.parse(raw); data = Array.isArray(p) ? { leads: p, buyers_manual: [] } : p; }
     } catch(e) {}
   }
-  if (data) {
-    leads  = (data.leads || []).map(normL);
+  if (data && data.leads) {
+    leads = (data.leads || []).map(normL);
     const manual = data.buyers_manual || [];
     buyers = [...BUYER_DB, ...manual];
-    const savedAt = data.savedAt ? new Date(data.savedAt).toLocaleString() : 'unknown';
-    console.log('[Fuchsmonte] Loaded', leads.length, 'leads, saved at', savedAt);
+    const savedAt = data.savedAt || data.updated_at;
+    console.log('[Fuchsmonte] Loaded', leads.length, 'leads from', data.leads ? 'Supabase' : 'localStorage');
   } else {
-    leads  = [];
+    leads = [];
     buyers = [...BUYER_DB];
   }
 }
-
 // ═══════════════════════════════════════════
 // PROPSTREAM COLUMN MAPPING
 // ═══════════════════════════════════════════
