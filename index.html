@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUCHSMONTE HOLDING — Land Acquisition Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c10;--bg2:#111318;--bg3:#181c23;--bg4:#1e2330;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --gold:#c9a84c;--gold2:#e8c96a;--gold-dim:rgba(201,168,76,0.12);--gold-dim2:rgba(201,168,76,0.22);
+  --text:#edeae2;--text2:#8b8a85;--text3:#5a5955;
+  --green:#2ecc8a;--green-bg:rgba(46,204,138,0.1);
+  --red:#e85c5c;--red-bg:rgba(232,92,92,0.1);
+  --amber:#f0a843;--amber-bg:rgba(240,168,67,0.1);
+  --blue:#4a9eff;--blue-bg:rgba(74,158,255,0.1);
+  --purple:#9b7eea;--purple-bg:rgba(155,126,234,0.12);
+  --r:10px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:13px;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:0.5px solid var(--border2);padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brand-mark{width:28px;height:28px;background:var(--gold);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#0a0c10}
+.brand-name{font-size:12px;font-weight:700;letter-spacing:0.07em}
+.brand-sub{font-size:9px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase}
+.topbar-center{display:flex;gap:3px;background:var(--bg3);border-radius:var(--rs);padding:3px}
+.top-tab{padding:5px 14px;border-radius:4px;border:none;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .12s;white-space:nowrap}
+.top-tab.active{background:var(--bg2);color:var(--text);border:0.5px solid var(--border2)}
+.topbar-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.btn{padding:6px 12px;border-radius:var(--rs);border:0.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;transition:background .12s;white-space:nowrap}
+.btn:hover{background:var(--bg4)}
+.btn-gold{background:var(--gold);color:#0a0c10;border-color:var(--gold);font-weight:600}
+.btn-gold:hover{background:var(--gold2)}
+.btn-green{background:var(--green-bg);color:var(--green);border-color:rgba(46,204,138,0.3)}
+.btn-red{background:var(--red-bg);color:var(--red);border-color:rgba(232,92,92,0.3)}
+.btn-sm{padding:3px 8px;font-size:11px}
+
+/* LAYOUT */
+.app{display:flex;height:calc(100vh - 52px)}
+.sidebar{width:210px;flex-shrink:0;background:var(--bg2);border-right:0.5px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;padding:12px 0}
+.sidebar-label{font-size:9px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;padding:8px 14px 3px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;color:var(--text2);font-size:12px;cursor:pointer;border-left:2px solid transparent;transition:all .12s;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:var(--gold-dim);font-weight:500}
+.nav-item svg{width:13px;height:13px;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;background:var(--bg4);color:var(--text2);padding:1px 5px;border-radius:8px;font-weight:600}
+.nav-badge.g{background:var(--green-bg);color:var(--green)}
+.ter-hd{display:flex;align-items:center;justify-content:space-between;padding:5px 14px;cursor:pointer;font-size:11px;color:var(--text2);user-select:none}
+.ter-hd:hover{color:var(--text)}
+.ter-hd.on{color:var(--gold);font-weight:500}
+.ter-co{padding:3px 14px 3px 22px;cursor:pointer;font-size:11px;color:var(--text3);display:flex;align-items:center;justify-content:space-between}
+.ter-co:hover{color:var(--text2)}
+.ter-co.on{color:var(--gold2)}
+.cnt{font-size:10px;color:var(--text3);background:var(--bg4);padding:1px 5px;border-radius:7px}
+.sidebar-bottom{margin-top:auto;padding:10px 14px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:5px}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:18px 22px}
+.page{display:none}.page.active{display:block}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.ph-title{font-size:16px;font-weight:700}
+.ph-title span{color:var(--gold)}
+.ph-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:11px 13px}
+.stat.hi{border-color:rgba(201,168,76,0.3)}
+.stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:700;line-height:1}
+.stat-val.gold{color:var(--gold)}.stat-val.green{color:var(--green)}.stat-val.blue{color:var(--blue)}.stat-val.red{color:var(--red)}.stat-val.purple{color:var(--purple)}.stat-val.amber{color:var(--amber)}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:3px}
+
+/* DROP ZONE */
+.drop-zone{border:1.5px dashed rgba(201,168,76,0.35);border-radius:var(--r);padding:32px 20px;text-align:center;margin-bottom:16px;cursor:pointer;background:var(--gold-dim);transition:all .2s}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--gold);background:var(--gold-dim2)}
+.drop-icon{font-size:28px;margin-bottom:8px;color:var(--gold)}
+.drop-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.drop-sub{font-size:11px;color:var(--text2)}
+.drop-sub span{color:var(--gold)}
+#file-input{display:none}
+
+/* IMPORT BAR */
+.import-bar{background:var(--bg2);border:0.5px solid rgba(46,204,138,0.3);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.import-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.import-msg{font-size:12px;color:var(--text2);flex:1}
+
+/* VIEW TABS */
+.vtabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--rs);padding:3px;margin-bottom:14px;width:fit-content}
+.vt{padding:5px 12px;border-radius:4px;border:none;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .12s}
+.vt.active{background:var(--bg2);color:var(--text);border:0.5px solid var(--border2)}
+
+/* FILTERS */
+.filters{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.fi{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:5px 9px;font-size:12px;font-family:inherit}
+.fi-wide{min-width:180px}
+
+/* KANBAN */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.lane{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:10px;min-height:200px}
+.lane-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.lane-name{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em}
+.lct{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600}
+.lct-New{background:var(--blue-bg);color:var(--blue)}
+.lct-Contacted{background:var(--amber-bg);color:var(--amber)}
+.lct-Offer{background:var(--purple-bg);color:var(--purple)}
+.lct-Contract{background:var(--green-bg);color:var(--green)}
+.lct-Closed{background:rgba(201,168,76,0.15);color:var(--gold)}
+.lct-Dead{background:rgba(255,255,255,0.04);color:var(--text3)}
+.kcard{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--rs);padding:9px;margin-bottom:7px;cursor:pointer;transition:border-color .12s,background .12s}
+.kcard:hover{border-color:var(--border2);background:var(--bg4)}
+.kcard.sel{border-color:var(--gold);background:var(--gold-dim);border-width:1.5px;box-shadow:0 0 0 2px rgba(201,168,76,0.15)}
+.kc-addr{font-size:11px;font-weight:600;color:var(--text);line-height:1.35;margin-bottom:2px}
+.kc-meta{font-size:10px;color:var(--text3);margin-bottom:5px}
+.kc-row{display:flex;justify-content:space-between;align-items:center}
+.kc-val{font-size:11px;font-weight:600;color:var(--gold)}
+.kc-zip{font-size:10px;color:var(--text3)}
+.pips{display:flex;gap:2px;margin-top:5px}
+.pip{width:9px;height:3px;border-radius:2px}
+.pip.on{background:var(--green)}.pip.off{background:var(--red)}
+.sc{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;margin-top:4px;display:inline-block}
+.sc-A{background:var(--green-bg);color:var(--green)}
+.sc-B{background:var(--amber-bg);color:var(--amber)}
+.sc-C{background:var(--red-bg);color:var(--red)}
+.lane-empty{font-size:11px;color:var(--text3);text-align:center;padding:16px 0}
+
+/* TABLE */
+.tbl-wrap{border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg3);border-bottom:0.5px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+td{padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.dr:hover td{background:var(--bg3);cursor:pointer}
+.sp{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.sp-New{background:var(--blue-bg);color:var(--blue)}
+.sp-Contacted{background:var(--amber-bg);color:var(--amber)}
+.sp-Offer{background:var(--purple-bg);color:var(--purple)}
+.sp-Contract{background:var(--green-bg);color:var(--green)}
+.sp-Closed{background:rgba(201,168,76,0.15);color:var(--gold)}
+.sp-Dead{background:rgba(255,255,255,0.04);color:var(--text3)}
+
+/* DETAIL PANEL */
+.detail{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);padding:14px 16px;margin-bottom:16px}
+.dp-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px}
+.dp-addr{font-size:14px;font-weight:700}
+.dp-owner{font-size:11px;color:var(--text2);margin-top:2px}
+.dp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:11px}
+.dp-f label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:2px}
+.dp-f span{font-size:12px;font-weight:500}
+.qual-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;border-top:0.5px solid var(--border);padding-top:9px;margin-bottom:11px}
+.qr{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding:2px 0}
+.qi{width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.qi.p{background:var(--green-bg);color:var(--green);border:1px solid rgba(46,204,138,0.3)}
+.qi.f{background:var(--red-bg);color:var(--red);border:1px solid rgba(232,92,92,0.3)}
+.dp-notes{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);font-size:12px;padding:7px 9px;resize:vertical;min-height:55px;font-family:inherit;margin-bottom:9px}
+.dp-notes:focus{outline:none;border-color:rgba(201,168,76,0.4)}
+.act-row{display:flex;gap:6px;flex-wrap:wrap}
+
+/* BUYER PAGE */
+.state-section{margin-bottom:24px}
+.state-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:0.5px solid var(--border2)}
+.state-flag{font-size:18px}
+.state-name{font-size:14px;font-weight:700}
+.state-count{font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:10px;margin-left:auto}
+.county-group{margin-bottom:16px}
+.county-header{font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;padding:5px 9px;background:var(--gold-dim);border-radius:var(--rs);display:flex;align-items:center;justify-content:space-between}
+.county-count{font-size:10px;background:var(--gold-dim2);color:var(--gold2);padding:1px 6px;border-radius:10px;font-weight:600}
+.buyer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bcard{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:12px;transition:border-color .12s}
+.bcard:hover{border-color:var(--border2)}
+.bcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;gap:6px}
+.bcard-name{font-size:12px;font-weight:600;color:var(--text);line-height:1.3}
+.btype{font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.bt-National{background:var(--gold-dim2);color:var(--gold)}
+.bt-Regional{background:var(--blue-bg);color:var(--blue)}
+.bt-Local{background:var(--green-bg);color:var(--green)}
+.bt-Developer{background:var(--purple-bg);color:var(--purple)}
+.bt-Investor{background:var(--amber-bg);color:var(--amber)}
+.bcard-body{font-size:11px;color:var(--text2);line-height:1.8}
+.bcard-body span{color:var(--text3);font-size:10px}
+.contact-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.cpill{font-size:10px;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);padding:2px 7px;border-radius:10px;cursor:pointer;transition:background .12s}
+.cpill:hover{background:var(--bg4);color:var(--text)}
+.cpill.ph{border-color:rgba(46,204,138,0.3);color:var(--green)}
+.cpill.em{border-color:rgba(74,158,255,0.3);color:var(--blue)}
+.ab{font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px}
+.ab-hot{background:var(--red-bg);color:var(--red)}
+.ab-active{background:var(--green-bg);color:var(--green)}
+.ab-watch{background:var(--amber-bg);color:var(--amber)}
+.ctags{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.ctag{font-size:10px;background:var(--bg4);color:var(--text3);padding:1px 5px;border-radius:3px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:0.5px solid var(--border2);border-radius:13px;padding:18px 20px;width:520px;max-width:95vw;max-height:87vh;overflow-y:auto}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-title{font-size:14px;font-weight:700}
+.modal-x{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fgrp{display:flex;flex-direction:column;gap:3px}
+.fgrp.full{grid-column:1/-1}
+.fgrp label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em}
+.fgrp input,.fgrp select,.fgrp textarea{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:7px 9px;font-size:12px;font-family:inherit}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{outline:none;border-color:rgba(201,168,76,0.5)}
+.fgrp textarea{min-height:52px;resize:vertical}
+.chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px}
+.chk{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer}
+.chk input{width:13px;height:13px;accent-color:var(--gold);cursor:pointer}
+.modal-ft{display:flex;justify-content:flex-end;gap:7px;margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border)}
+
+/* TOAST */
+.toast{position:fixed;bottom:18px;right:18px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--text);z-index:999;display:flex;align-items:center;gap:8px;transform:translateY(70px);opacity:0;transition:all .22s ease;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.tdot.g{background:var(--gold)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">FM</div>
+    <div>
+      <div class="brand-name">FUCHSMONTE HOLDING</div>
+      <div class="brand-sub">Land Acquisition Dashboard</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <button class="top-tab active" onclick="switchPage('pipeline',this)">&#9646; Pipeline</button>
+    <button class="top-tab" onclick="switchPage('buyers',this)">&#128101; Buyer CRM</button>
+  </div>
+  <div class="topbar-right">
+    <span id="sync-info" style="font-size:11px;color:var(--text3)">No data</span>
+    <button class="btn" onclick="document.getElementById('file-input').click()">&#8679; Import file</button>
+    <button class="btn btn-gold" id="add-btn" onclick="openLeadModal(null)">+ Add lead</button>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(this)">
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <!-- Pipeline nav -->
+    <div id="pipe-nav">
+      <div class="sidebar-label">Pipeline</div>
+      <div class="nav-item active" onclick="setPipeFilter('','',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/><rect x="14" y="17" width="7" height="4" rx="1"/></svg>
+        All leads <span class="nav-badge g" id="nb-all">0</span>
+      </div>
+      <div class="sidebar-label" style="margin-top:8px">Territories</div>
+      <div id="ter-nav"></div>
+    </div>
+
+    <!-- Buyer nav -->
+    <div id="buyer-nav" style="display:none">
+      <div class="sidebar-label">Buyer states</div>
+      <div class="nav-item active" id="bsi-all" onclick="setBuyerFilter('','',this)">
+        All states <span class="nav-badge" id="nb-buyers">0</span>
+      </div>
+      <div id="buyer-state-nav"></div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <button class="btn btn-green" style="justify-content:center" id="sidebar-add-btn" onclick="openLeadModal(null)">+ Add lead</button>
+      <button class="btn" style="justify-content:center;font-size:11px" onclick="exportCSV()">&#8595; Export CSV</button>
+      <button class="btn btn-gold" style="justify-content:center;font-size:11px" onclick="saveBackup()">&#128190; Save backup</button>
+      <button class="btn" style="justify-content:center;font-size:11px" onclick="loadBackup()">&#8679; Load backup</button>
+      <button class="btn btn-red" style="justify-content:center;font-size:11px" onclick="clearLeads()">Clear leads</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ═══ PIPELINE PAGE ═══ -->
+    <div class="page active" id="page-pipeline">
+      <div class="ph">
+        <div>
+          <div class="ph-title">Seller <span>Pipeline</span></div>
+          <div class="ph-sub" id="pipe-sub">Import a PropStream CSV or XLSX to get started</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input class="fi fi-wide" type="text" id="srch" placeholder="Search address, owner, zip…" oninput="renderPipeline()">
+          <select class="fi" id="fstage" onchange="renderPipeline()">
+            <option value="">All stages</option>
+            <option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
+          </select>
+          <select class="fi" id="fscore" onchange="renderPipeline()">
+            <option value="">All scores</option>
+            <option value="A">A — Qualified</option>
+            <option value="B">B — Review</option>
+            <option value="C">C — Disqualified</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats" id="pipe-stats"></div>
+
+      <div class="drop-zone" id="drop-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)">
+        <div class="drop-icon">&#8679;</div>
+        <div class="drop-title">Drop your PropStream export here</div>
+        <div class="drop-sub">Supports <span>.csv</span> and <span>.xlsx</span> · all 75 PropStream columns recognized</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Import one file per county, or all counties together</div>
+      </div>
+
+      <div class="import-bar" id="import-bar" style="display:none">
+        <div class="import-dot"></div>
+        <div class="import-msg" id="import-msg"></div>
+        <button class="btn btn-sm" onclick="document.getElementById('file-input').click()">Import more</button>
+      </div>
+
+      <div id="detail-wrap"></div>
+
+      <div id="lead-content" style="display:none">
+        <div class="vtabs">
+          <button class="vt active" onclick="setView('kanban',this)">Pipeline</button>
+          <button class="vt" onclick="setView('table',this)">Table</button>
+        </div>
+        <div id="kanban-view"><div class="kanban" id="kanban-board"></div></div>
+        <div id="table-view" style="display:none">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th onclick="sortBy('addr')">Address</th>
+                <th onclick="sortBy('owner')">Owner</th>
+                <th onclick="sortBy('phone')">Phone</th>
+                <th onclick="sortBy('state')">State</th>
+                <th onclick="sortBy('county')">County</th>
+                <th onclick="sortBy('zip')">Zip</th>
+                <th onclick="sortBy('lotSf')">Lot sf</th>
+                <th onclick="sortBy('estValue')">Est. Value</th>
+                <th onclick="sortBy('offerAmt')">Offer</th>
+                <th onclick="sortBy('equity')">Equity</th>
+                <th onclick="sortBy('stage')">Stage</th>
+                <th onclick="sortBy('score')">Score</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="tbl-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BUYER PAGE ═══ -->
+    <div class="page" id="page-buyers">
+      <div class="ph">
+        <div>
+          <div class="ph-title">Buyer <span>CRM</span></div>
+          <div class="ph-sub" id="buyer-sub">52 verified buyers · 6 states · organized by county</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input class="fi fi-wide" type="text" id="bsrch" placeholder="Search company, county, zip…" oninput="renderBuyers()">
+          <select class="fi" id="bftype" onchange="renderBuyers()">
+            <option value="">All types</option>
+            <option>National</option><option>Regional</option><option>Local</option><option>Developer</option><option>Investor</option>
+          </select>
+          <select class="fi" id="bfact" onchange="renderBuyers()">
+            <option value="">All activity</option>
+            <option value="hot">Hot — buying now</option>
+            <option value="active">Active</option>
+            <option value="watch">Watch</option>
+          </select>
+          <button class="btn btn-gold" onclick="openBuyerModal(null)">+ Add buyer</button>
+        </div>
+      </div>
+      <div class="stats" id="buyer-stats" style="grid-template-columns:repeat(6,1fr)"></div>
+      <div id="buyer-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LEAD MODAL -->
+<div class="modal-bg" id="lead-modal">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title" id="lm-title">Add lead</div><button class="modal-x" onclick="closeLeadModal()">×</button></div>
+    <div class="fg">
+      <div class="fgrp full"><label>Property address</label><input type="text" id="f-addr" placeholder="801 SE 32nd Ter, Cape Coral, FL"></div>
+      <div class="fgrp"><label>Owner name</label><input type="text" id="f-owner"></div>
+      <div class="fgrp"><label>Phone</label><input type="text" id="f-phone"></div>
+      <div class="fgrp"><label>Email</label><input type="email" id="f-email"></div>
+      <div class="fgrp"><label>State</label><input type="text" id="f-state" placeholder="FL"></div>
+      <div class="fgrp"><label>County</label><input type="text" id="f-county" placeholder="Lee County"></div>
+      <div class="fgrp"><label>Zip</label><input type="text" id="f-zip"></div>
+      <div class="fgrp"><label>Lot size (sf)</label><input type="text" id="f-lot"></div>
+      <div class="fgrp"><label>Est. value ($)</label><input type="text" id="f-val"></div>
+      <div class="fgrp"><label>Our offer ($)</label><input type="text" id="f-offer"></div>
+      <div class="fgrp"><label>Stage</label>
+        <select id="f-stage"><option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option></select>
+      </div>
+      <div class="fgrp"><label>Score</label>
+        <select id="f-score"><option value="A">A — Qualified</option><option value="B">B — Review</option><option value="C">C — Disqualified</option></select>
+      </div>
+      <div class="fgrp full">
+        <label>Qualification checks</label>
+        <div class="chk-grid">
+          <label class="chk"><input type="checkbox" id="q0"> Flood Zone X</label>
+          <label class="chk"><input type="checkbox" id="q1"> Residential zoning</label>
+          <label class="chk"><input type="checkbox" id="q2"> No protected species</label>
+          <label class="chk"><input type="checkbox" id="q3"> No main road</label>
+          <label class="chk"><input type="checkbox" id="q4"> Canal/seawall OK</label>
+          <label class="chk"><input type="checkbox" id="q5"> Correct zip</label>
+        </div>
+      </div>
+      <div class="fgrp full"><label>Notes</label><textarea id="f-notes"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeLeadModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveLead()">Save lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUYER MODAL -->
+<div class="modal-bg" id="buyer-modal">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title" id="bm-title">Add buyer</div><button class="modal-x" onclick="closeBuyerModal()">×</button></div>
+    <div class="fg">
+      <div class="fgrp full"><label>Company / buyer name</label><input type="text" id="b-name" placeholder="Lennar Corporation"></div>
+      <div class="fgrp"><label>Type</label><select id="b-type"><option>National</option><option>Regional</option><option>Local</option><option>Developer</option><option>Investor</option></select></div>
+      <div class="fgrp"><label>State</label>
+        <select id="b-state"><option value="FL">Florida</option><option value="TX">Texas</option><option value="CA">California</option><option value="AZ">Arizona</option><option value="SC">South Carolina</option><option value="NC">North Carolina</option></select>
+      </div>
+      <div class="fgrp"><label>Corporate phone</label><input type="text" id="b-phone"></div>
+      <div class="fgrp full"><label>Land acquisition email</label><input type="email" id="b-email"></div>
+      <div class="fgrp full"><label>Contact person</label><input type="text" id="b-contact" placeholder="Name — Title"></div>
+      <div class="fgrp full"><label>Counties</label><input type="text" id="b-counties" placeholder="Lee County, Collier County"></div>
+      <div class="fgrp"><label>Min lot (sf)</label><input type="text" id="b-minlot"></div>
+      <div class="fgrp"><label>Max budget</label><input type="text" id="b-budget"></div>
+      <div class="fgrp full"><label>Target zips</label><input type="text" id="b-zips"></div>
+      <div class="fgrp"><label>Activity</label>
+        <select id="b-activity"><option value="hot">Hot — buying now</option><option value="active">Active</option><option value="watch">Watch</option></select>
+      </div>
+      <div class="fgrp full"><label>Notes</label><textarea id="b-notes"></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeBuyerModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveBuyer()">Save buyer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const STATES = {
+  FL:{name:'Florida',flag:'🌴'},TX:{name:'Texas',flag:'⭐'},
+  CA:{name:'California',flag:'☀️'},AZ:{name:'Arizona',flag:'🌵'},
+  SC:{name:'South Carolina',flag:'🌙'},NC:{name:'North Carolina',flag:'🏔️'}
+};
+const QUAL_LABELS = ['Zone X','Zoning','No species','No main rd','Canal ok','Zip ok'];
+const MAIN_ROADS  = ['pine island','santa barbara','gleason','del prado','cape coral pkwy','coronado','veterans','burnt store','nicholas'];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let leads=[], buyers=[], selId=null, editLId=null, editBId=null, nid=1000, sortCol=null, sortDir=1;
+let pipeState='', pipeCounty='', buyerState='', buyerCounty='';
+let currentPage = 'pipeline';
+
+// ═══════════════════════════════════════════
+// PERSIST / HYDRATE
+// ═══════════════════════════════════════════
+// ── CLOUD STORAGE (window.storage) ──
+// Saves to Claude's persistent storage — works from any device, any browser.
+// Falls back to localStorage if window.storage unavailable.
+
+async function persist() {
+  const data = {
+    leads: leads,
+    buyers_manual: buyers.filter(b => b.manual),
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    if (window.storage) {
+      await window.storage.set('fuchsmonte_data', JSON.stringify(data));
+    } else {
+      localStorage.setItem('fuchsmonte_data', JSON.stringify(data));
+    }
+  } catch(e) {
+    try { localStorage.setItem('fuchsmonte_data', JSON.stringify(data)); } catch(e2) {}
+  }
+}
+
+async function hydrate() {
+  let data = null;
+  try {
+    if (window.storage) {
+      const result = await window.storage.get('fuchsmonte_data');
+      if (result && result.value) data = JSON.parse(result.value);
+    }
+  } catch(e) {}
+  // Fallback to localStorage
+  if (!data) {
+    try {
+      const raw = localStorage.getItem('fuchsmonte_data') || localStorage.getItem('fm_leads');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Handle old format (just leads array) or new format (object with leads key)
+        data = Array.isArray(parsed) ? { leads: parsed, buyers_manual: [] } : parsed;
+      }
+    } catch(e) {}
+  }
+  if (data) {
+    leads  = (data.leads || []).map(normL);
+    const manual = data.buyers_manual || [];
+    buyers = [...BUYER_DB, ...manual];
+    const savedAt = data.savedAt ? new Date(data.savedAt).toLocaleString() : 'unknown';
+    console.log('[Fuchsmonte] Loaded', leads.length, 'leads, saved at', savedAt);
+  } else {
+    leads  = [];
+    buyers = [...BUYER_DB];
+  }
+}
+
+// ═══════════════════════════════════════════
+// PROPSTREAM COLUMN MAPPING
+// ═══════════════════════════════════════════
+function g(row, keys) {
+  for (const k of keys) {
+    const v = row[k];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+  }
+  return '';
+}
+function pn(v) { return parseFloat(String(v||'').replace(/[$,%,]/g,'').replace(/,/g,''))||0; }
+
+function mapRow(row) {
+  const fn    = g(row,['Owner 1 First Name','First Name','firstname']);
+  const ln    = g(row,['Owner 1 Last Name','Last Name','lastname']);
+  const care  = g(row,['Mailing Care of Name','Owner Name','owner_name','Name']);
+  const owner = fn&&ln ? `${ln}, ${fn}` : care||'Unknown';
+  const phones= [1,2,3,4,5].map(n=>g(row,[`Phone ${n}`,'Phone','phone'])).filter(Boolean);
+  const emails= [1,2,3,4].map(n=>g(row,[`Email ${n}`,'Email','email'])).filter(Boolean);
+  const estVal= pn(g(row,['Est. Value','Estimated Value','AVM','Market Value']));
+  const lotSf = pn(g(row,['Lot Size Sqft','Lot Size','LotSize','Lot Sqft']));
+  const equity= pn(g(row,['Est. Equity','Equity']));
+  const zip   = g(row,['Zip','ZIP','zip_code','Zip Code','postal_code']);
+  const county= g(row,['County','county']);
+  const state = g(row,['State','state','ST'])||'FL';
+  const addr  = g(row,['Address','address','Property Address','Street Address']);
+  const city  = g(row,['City','city']);
+  const addrFull = addr + (city?', '+city:'');
+  const mainRd= MAIN_ROADS.some(r=>addr.toLowerCase().includes(r));
+  const q     = [1,1,1,mainRd?0:1,1,1];
+  const qSum  = q.reduce((a,b)=>a+b,0);
+  const score = qSum===6?'A':qSum>=4?'B':'C';
+  const offerAmt = estVal ? Math.round(estVal*0.55) : 0;
+  return normL({
+    addr:addrFull, rawAddr:addr, city, state,
+    county: county?(county.toLowerCase().includes('county')?county:county+' County'):'',
+    zip, apn:g(row,['APN','apn','Parcel Number']),
+    owner, phone:phones[0]||'', allPhones:phones,
+    email:emails[0]||'', allEmails:emails,
+    mailingAddress:[g(row,['Mailing Address']),g(row,['Mailing City']),g(row,['Mailing State']),g(row,['Mailing Zip'])].filter(Boolean).join(', '),
+    lot:lotSf?lotSf.toLocaleString():'—', lotSf, estValue:estVal,
+    price:estVal?'$'+estVal.toLocaleString():'—',
+    offerAmt, offer:offerAmt?'$'+offerAmt.toLocaleString():'',
+    equity, openLoans:pn(g(row,['Total Open Loans'])),
+    assessed:pn(g(row,['Total Assessed Value','Assessed Value'])),
+    lastSaleDate:g(row,['Last Sale Recording Date','Last Sale Date']),
+    lastSaleAmt:pn(g(row,['Last Sale Amount'])),
+    ownerOccupied:g(row,['Owner Occupied']),
+    doNotMail:g(row,['Do Not Mail']),
+    propertyType:g(row,['Property Type']),
+    stage:'New', score, q, flags:mainRd?['Possible main road']:[],
+    notes:'', source:'Import', importedAt:new Date().toISOString(),
+    id: 'L' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+  });
+}
+
+function normL(l) {
+  // Preserve existing ID — never regenerate. Regenerating caused selId to point to wrong lead.
+  const stableId = (l && l.id != null) ? l.id : ('L' + Date.now() + '_' + Math.random().toString(36).slice(2,7));
+  return {
+    addr:'',rawAddr:'',city:'',state:'FL',county:'',zip:'',apn:'',
+    owner:'',phone:'',allPhones:[],email:'',allEmails:[],mailingAddress:'',
+    lot:'—',lotSf:0,estValue:0,price:'—',offerAmt:0,offer:'',equity:0,
+    openLoans:0,assessed:0,lastSaleDate:'',lastSaleAmt:0,ownerOccupied:'',
+    doNotMail:'',propertyType:'',stage:'New',score:'B',
+    q:[1,1,1,1,1,1],flags:[],notes:'',source:'Manual',importedAt:'',
+    ...l,
+    id: stableId,
+  };
+}
+
+// ═══════════════════════════════════════════
+// FILE IMPORT
+// ═══════════════════════════════════════════
+function handleFile(input) { const f=input.files[0]; if(f){processFile(f);} input.value=''; }
+function handleDrop(e) { const f=e.dataTransfer.files[0]; if(f) processFile(f); }
+
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  toast('Reading '+file.name+'…');
+  if (ext==='csv') {
+    Papa.parse(file,{header:true,skipEmptyLines:true,
+      complete:r=>importRows(r.data,file.name),
+      error:e=>toast('CSV error: '+e.message)});
+  } else if (ext==='xlsx'||ext==='xls') {
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      importRows(XLSX.utils.sheet_to_json(ws,{defval:''}),file.name);
+    };
+    reader.readAsArrayBuffer(file);
+  } else toast('Use .csv or .xlsx files');
+}
+
+function importRows(rows, fileName) {
+  if(!rows.length){toast('File appears empty');return;}
+  const existing = new Set(leads.map(l=>l.rawAddr.toLowerCase()));
+  let added=0, skipped=0;
+  rows.forEach(row=>{
+    const m=mapRow(row);
+    if(!m.rawAddr)return;
+    if(existing.has(m.rawAddr.toLowerCase())){skipped++;return;}
+    leads.push(m); existing.add(m.rawAddr.toLowerCase()); added++;
+  });
+  persist();
+  const qA=leads.filter(l=>l.score==='A').length;
+  document.getElementById('drop-zone').style.display='none';
+  document.getElementById('lead-content').style.display='block';
+  document.getElementById('import-bar').style.display='flex';
+  document.getElementById('import-msg').innerHTML=
+    `<strong>${added} leads imported</strong> from ${fileName} · ${skipped} duplicates skipped · <strong style="color:var(--green)">${qA} qualify (A score)</strong>`;
+  document.getElementById('sync-info').textContent=leads.length+' leads';
+  renderPipeline(); buildTerNav();
+  toast(added+' leads imported — '+qA+' qualified',true);
+}
+
+// ═══════════════════════════════════════════
+// PIPELINE FILTERS
+// ═══════════════════════════════════════════
+function filteredLeads() {
+  const s  =(document.getElementById('srch')||{value:''}).value.toLowerCase();
+  const fs =(document.getElementById('fstage')||{value:''}).value;
+  const fsc=(document.getElementById('fscore')||{value:''}).value;
+  let data = leads.filter(l=>{
+    const ms =!s||(l.addr.toLowerCase().includes(s)||l.owner.toLowerCase().includes(s)||l.zip.includes(s)||(l.phone||'').includes(s));
+    const mst=!fs||l.stage===fs;
+    const msc=!fsc||l.score===fsc;
+    const mtr=!pipeState||(l.state===pipeState&&(!pipeCounty||l.county===pipeCounty));
+    return ms&&mst&&msc&&mtr;
+  });
+  if(sortCol){
+    data=[...data].sort((a,b)=>{
+      let av=a[sortCol]||'',bv=b[sortCol]||'';
+      if(typeof av==='number')return(av-bv)*sortDir;
+      return String(av).localeCompare(String(bv))*sortDir;
+    });
+  }
+  return data;
+}
+function sortBy(col){sortCol===col?sortDir*=-1:(sortCol=col,sortDir=1);renderPipeline();}
+
+// ═══════════════════════════════════════════
+// TERRITORY NAV (pipeline)
+// ═══════════════════════════════════════════
+function buildTerNav() {
+  const states=[...new Set(leads.map(l=>l.state))].filter(Boolean).sort();
+  document.getElementById('ter-nav').innerHTML=states.map(st=>{
+    const counties=[...new Set(leads.filter(l=>l.state===st).map(l=>l.county))].filter(Boolean).sort();
+    const sCnt=leads.filter(l=>l.state===st).length;
+    return `<div class="ter-hd${pipeState===st?' on':''}" onclick="setPipeFilter('${st}','',this)">
+        <span>${STATES[st]?.name||st}</span><span class="cnt">${sCnt}</span>
+      </div>
+      ${pipeState===st?counties.map(c=>{
+        const cCnt=leads.filter(l=>l.state===st&&l.county===c).length;
+        return `<div class="ter-co${pipeCounty===c?' on':''}" onclick="setPipeFilter('${st}','${c}',this)">
+          <span>${c}</span><span class="cnt">${cCnt}</span>
+        </div>`;
+      }).join(''):''}`;
+  }).join('');
+  document.getElementById('nb-all').textContent=leads.length;
+}
+
+function setPipeFilter(state,county,el) {
+  if(pipeState===state&&pipeCounty===county){pipeState='';pipeCounty='';}
+  else{pipeState=state;pipeCounty=county;}
+  document.querySelectorAll('#pipe-nav .nav-item,.ter-hd,.ter-co').forEach(e=>e.classList.remove('active','on'));
+  if(el)el.classList.add(el.classList.contains('nav-item')?'active':'on');
+  if(!state)document.querySelector('#pipe-nav .nav-item').classList.add('active');
+  buildTerNav();
+  const sub=document.getElementById('pipe-sub');
+  if(sub) sub.textContent=(pipeState?(STATES[pipeState]?.name||pipeState)+(pipeCounty?' · '+pipeCounty:''):'All territories')+' · '+filteredLeads().length+' leads';
+  renderPipeline();
+}
+
+// ═══════════════════════════════════════════
+// PIPELINE STATS
+// ═══════════════════════════════════════════
+function renderPipeStats() {
+  const all=leads, filt=filteredLeads();
+  const val=all.filter(l=>l.offer&&l.stage!=='Dead').reduce((a,l)=>a+(parseInt((l.offer||'').replace(/\D/g,''))||0),0);
+  document.getElementById('pipe-stats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Total leads</div><div class="stat-val">${all.length}</div><div class="stat-sub">${filt.length} in view</div></div>
+    <div class="stat hi"><div class="stat-lbl">Qualified (A)</div><div class="stat-val gold">${all.filter(l=>l.score==='A').length}</div><div class="stat-sub">contact first</div></div>
+    <div class="stat"><div class="stat-lbl">Active</div><div class="stat-val blue">${all.filter(l=>['Contacted','Offer Sent','Under Contract'].includes(l.stage)).length}</div><div class="stat-sub">in progress</div></div>
+    <div class="stat"><div class="stat-lbl">Offer pipeline</div><div class="stat-val green">$${val.toLocaleString()}</div><div class="stat-sub">total offers</div></div>
+    <div class="stat"><div class="stat-lbl">Closed</div><div class="stat-val green">${all.filter(l=>l.stage==='Closed').length}</div><div class="stat-sub">deals done</div></div>`;
+}
+
+// ═══════════════════════════════════════════
+// KANBAN
+// ═══════════════════════════════════════════
+function renderKanban() {
+  const data=filteredLeads();
+  const STAGES=['New','Contacted','Offer Sent','Under Contract','Closed'];
+  const LC={New:'New',Contacted:'Contacted','Offer Sent':'Offer','Under Contract':'Contract',Closed:'Closed'};
+  document.getElementById('kanban-board').innerHTML=STAGES.map(st=>{
+    const cards=data.filter(l=>l.stage===st);
+    return `<div class="lane">
+      <div class="lane-hd"><span class="lane-name">${st}</span><span class="lct lct-${LC[st]}">${cards.length}</span></div>
+      ${!cards.length?'<div class="lane-empty">Empty</div>':cards.map(l=>`
+        <div class="kcard${String(selId)===String(l.id)?' sel':''}" onclick="selLead('${l.id}')">
+          <div class="kc-addr">${l.addr}</div>
+          <div class="kc-meta">${l.owner||'—'}</div>
+          <div class="kc-row"><span class="kc-val">${l.price}</span><span class="kc-zip">${l.zip}</span></div>
+          <div class="pips">${(l.q||[]).map(v=>`<div class="pip ${v?'on':'off'}"></div>`).join('')}</div>
+          <span class="sc sc-${l.score}">${l.score}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// TABLE
+// ═══════════════════════════════════════════
+function renderTable() {
+  const data=filteredLeads();
+  const tbody=document.getElementById('tbl-body');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:22px;color:var(--text3)">No leads match filters</td></tr>';return;}
+  tbody.innerHTML=data.map(l=>{
+    const sk=l.stage==='Offer Sent'?'Offer':l.stage==='Under Contract'?'Contract':l.stage;
+    return `<tr class="dr" onclick="selLead('${l.id}')">
+      <td><div style="font-weight:600;font-size:12px">${l.addr}</div></td>
+      <td style="color:var(--text2)">${l.owner||'—'}</td>
+      <td style="color:var(--text2)">${l.phone||'—'}</td>
+      <td style="color:var(--text3)">${l.state}</td>
+      <td style="color:var(--text3);font-size:11px">${l.county}</td>
+      <td>${l.zip}</td>
+      <td style="color:var(--text2)">${l.lot}</td>
+      <td style="color:var(--gold);font-weight:600">${l.price}</td>
+      <td style="color:var(--green);font-weight:600">${l.offer||'—'}</td>
+      <td style="color:var(--text2)">${l.equity?'$'+Number(l.equity).toLocaleString():'—'}</td>
+      <td><span class="sp sp-${sk}">${l.stage}</span></td>
+      <td><span class="sc sc-${l.score}">${l.score}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="event.stopPropagation();openLeadModal('${l.id}')" style="padding:3px 7px">Edit</button>
+        <button class="btn btn-sm btn-red" onclick="event.stopPropagation();delLead('${l.id}')" style="padding:3px 7px">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════
+function renderDetail() {
+  const wrap=document.getElementById('detail-wrap');
+  if(!selId){wrap.innerHTML='';return;}
+  const l=leads.find(x=>String(x.id)===String(selId));  // stable string comparison
+  if(!l){wrap.innerHTML='';return;}
+  const phones=(l.allPhones&&l.allPhones.length?l.allPhones:l.phone?[l.phone]:[]).filter(Boolean)
+    .map((p,i)=>`<div style="font-size:12px">${p}${i===0?' <span style="font-size:10px;color:var(--text3)">primary</span>':''}</div>`).join('')||'—';
+  wrap.innerHTML=`<div class="detail">
+    <div class="dp-hd">
+      <div>
+        <div class="dp-addr">${l.addr}</div>
+        <div class="dp-owner">${l.owner||'—'} · ${l.county} · ${l.state}</div>
+        ${(l.flags||[]).length?`<div style="margin-top:5px">${l.flags.map(f=>`<span style="font-size:10px;background:var(--red-bg);color:var(--red);border:0.5px solid rgba(232,92,92,0.3);padding:2px 6px;border-radius:3px;margin-right:3px">${f}</span>`).join('')}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <span class="sc sc-${l.score}" style="font-size:12px;padding:4px 10px">${l.score==='A'?'A — Qualified':l.score==='B'?'B — Review':'C — Disqualified'}</span>
+        <button class="btn btn-sm" onclick="openLeadModal('${l.id}')">Edit</button>
+        <button class="btn btn-sm" onclick="selId=null;renderPipeline()" style="padding:3px 8px">✕</button>
+      </div>
+    </div>
+    <div class="dp-grid">
+      <div class="dp-f"><label>Est. value</label><span style="color:var(--gold)">${l.price}</span></div>
+      <div class="dp-f"><label>Our offer (55%)</label><span style="color:var(--green)">${l.offer||'—'}</span></div>
+      <div class="dp-f"><label>Est. equity</label><span>${l.equity?'$'+Number(l.equity).toLocaleString():'—'}</span></div>
+      <div class="dp-f"><label>Lot size</label><span>${l.lot} sf</span></div>
+      <div class="dp-f"><label>Open loans</label><span>${l.openLoans||'0'}</span></div>
+      <div class="dp-f"><label>Assessed value</label><span>${l.assessed?'$'+Number(l.assessed).toLocaleString():'—'}</span></div>
+      <div class="dp-f"><label>Phone(s)</label><div>${phones}</div></div>
+      <div class="dp-f"><label>Email</label><span>${l.email?`<a href="mailto:${l.email}" style="color:var(--gold);text-decoration:none">${l.email}</a>`:'—'}</span></div>
+      <div class="dp-f"><label>Mailing address</label><span style="font-size:11px">${l.mailingAddress||'—'}</span></div>
+      <div class="dp-f"><label>Owner occupied</label><span>${l.ownerOccupied||'—'}</span></div>
+      <div class="dp-f"><label>Last sale</label><span style="font-size:11px">${l.lastSaleDate||'—'}${l.lastSaleAmt?' · $'+Number(l.lastSaleAmt).toLocaleString():''}</span></div>
+      <div class="dp-f"><label>APN</label><span style="font-size:11px">${l.apn||'—'}</span></div>
+    </div>
+    <div class="qual-grid">
+      ${QUAL_LABELS.map((k,i)=>`<div class="qr"><div class="qi ${(l.q||[])[i]?'p':'f'}">${(l.q||[])[i]?'✓':'✕'}</div><span>${k}</span></div>`).join('')}
+    </div>
+    <textarea class="dp-notes" id="dpn-${l.id}" placeholder="Notes, follow-up dates…">${l.notes||''}</textarea>
+    <div class="act-row">
+      <button class="btn btn-gold btn-sm" onclick="saveNotes('${l.id}')">Save notes</button>
+      <button class="btn btn-sm" onclick="advance('${l.id}')">→ Advance stage</button>
+      <select onchange="changeStage('${l.id}',this.value)" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:4px 8px;font-size:11px;font-family:inherit">
+        <option value="">Set stage…</option>
+        <option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
+      </select>
+      <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
+    </div>
+  </div>`;
+}
+
+function renderPipeline() {
+  renderPipeStats();
+  renderKanban();
+  renderTable();
+  renderDetail();
+  const sub=document.getElementById('pipe-sub');
+  if(sub&&leads.length) sub.textContent=(pipeState?(STATES[pipeState]?.name||pipeState)+(pipeCounty?' · '+pipeCounty:''):'All territories')+' · '+filteredLeads().length+' leads';
+}
+
+// ═══════════════════════════════════════════
+// PIPELINE ACTIONS
+// ═══════════════════════════════════════════
+function selLead(id){
+  selId = String(selId)===String(id) ? null : String(id);
+  renderPipeline();
+  // Scroll detail panel into view so user sees the correct info immediately
+  if(selId){
+    requestAnimationFrame(()=>{
+      const el=document.getElementById('detail-wrap');
+      if(el&&el.firstChild) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+  }
+}
+function advance(id){
+  const order=['New','Contacted','Offer Sent','Under Contract','Closed'];
+  const l=leads.find(x=>String(x.id)===String(id));
+  if(!l)return;
+  const i=order.indexOf(l.stage);
+  if(i<order.length-1){l.stage=order[i+1];persist();toast('Stage → '+l.stage,true);renderPipeline();}
+}
+function changeStage(id,stage){
+  if(!stage)return;
+  const l=leads.find(x=>String(x.id)===String(id));
+  if(l){l.stage=stage;persist();toast('Stage → '+stage,true);renderPipeline();}
+}
+function saveNotes(id){
+  const l=leads.find(x=>String(x.id)===String(id));
+  const ta=document.getElementById('dpn-'+id);
+  if(l&&ta){l.notes=ta.value;persist();toast('Notes saved');}
+}
+function delLead(id){
+  if(!confirm('Remove this lead?'))return;
+  leads=leads.filter(x=>String(x.id)!==String(id));
+  if(String(selId)===String(id))selId=null;  // clear selection if deleted
+  persist();toast('Lead removed');renderPipeline();buildTerNav();
+}
+async function clearLeads(){
+  if(!confirm('Clear ALL leads? This cannot be undone.'))return;
+  leads=[];selId=null;
+  await persist();
+  // Also clear old localStorage keys
+  try { localStorage.removeItem('fm_leads'); localStorage.removeItem('fuchsmonte_data'); } catch(e) {}
+  document.getElementById('drop-zone').style.display='block';
+  document.getElementById('lead-content').style.display='none';
+  document.getElementById('import-bar').style.display='none';
+  document.getElementById('sync-info').textContent='No data';
+  renderPipeline();buildTerNav();toast('All leads cleared');
+}
+
+// ═══════════════════════════════════════════
+// LEAD MODAL
+// ═══════════════════════════════════════════
+function openLeadModal(id){
+  editLId=id;
+  const l=id?leads.find(x=>String(x.id)===String(id)):null;
+  document.getElementById('lm-title').textContent=l?'Edit lead':'Add lead';
+  const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  set('f-addr',l?.addr);set('f-owner',l?.owner);set('f-phone',l?.phone);set('f-email',l?.email);
+  set('f-state',l?.state||'FL');set('f-county',l?.county);set('f-zip',l?.zip);
+  set('f-lot',l?.lot);set('f-val',l?.price);set('f-offer',l?.offer);
+  set('f-stage',l?.stage||'New');set('f-score',l?.score||'B');set('f-notes',l?.notes);
+  QUAL_LABELS.forEach((_,i)=>{const e=document.getElementById('q'+i);if(e)e.checked=l?!!(l.q||[])[i]:false;});
+  document.getElementById('lead-modal').classList.add('open');
+}
+function closeLeadModal(){document.getElementById('lead-modal').classList.remove('open');}
+function saveLead(){
+  const addr=document.getElementById('f-addr').value.trim();
+  if(!addr){alert('Address required');return;}
+  const data={
+    addr,rawAddr:addr,owner:(document.getElementById('f-owner').value||'').trim(),
+    phone:(document.getElementById('f-phone').value||'').trim(),
+    email:(document.getElementById('f-email').value||'').trim(),
+    state:(document.getElementById('f-state').value||'FL').trim(),
+    county:(document.getElementById('f-county').value||'').trim(),
+    zip:(document.getElementById('f-zip').value||'').trim(),
+    lot:(document.getElementById('f-lot').value||'—').trim(),
+    price:(document.getElementById('f-val').value||'—').trim(),
+    offer:(document.getElementById('f-offer').value||'').trim(),
+    stage:document.getElementById('f-stage').value,
+    score:document.getElementById('f-score').value,
+    q:QUAL_LABELS.map((_,i)=>document.getElementById('q'+i)?.checked?1:0),
+    notes:(document.getElementById('f-notes').value||'').trim(),source:'Manual',
+  };
+  if(editLId){
+    const idx=leads.findIndex(x=>String(x.id)===String(editLId));
+    leads[idx]={...leads[idx],...data};toast('Lead updated',true);
+  } else {
+    leads.push(normL({id:'L'+Date.now()+'_'+Math.random().toString(36).slice(2,7),...data}));
+    document.getElementById('lead-content').style.display='block';
+    document.getElementById('drop-zone').style.display='none';
+    toast('Lead added',true);
+  }
+  persist();closeLeadModal();renderPipeline();buildTerNav();
+}
+
+// ═══════════════════════════════════════════
+// BUYER DATABASE
+// ═══════════════════════════════════════════
+const BUYER_DB = [
+  // ── FLORIDA ──
+  {id:2001,name:'D.R. Horton / Forestar Group',type:'National',state:'FL',counties:['Lee County','Collier County','Charlotte County'],phone:'(817) 390-8200',email:'landacquisitions@drhorton.com',contact:'SW Florida Land Division',minlot:'10,000',budget:'$50M+',zips:'33990,33991,33904,33914,33993',activity:'hot',notes:'Largest landowner in Lee County. Closed $100M Hudson Creek deal Dec 2024 (3,500 lots). Actively acquiring vacant residential lots via Forestar subsidiary.'},
+  {id:2002,name:'Lennar Homes',type:'National',state:'FL',counties:['Lee County','Collier County'],phone:'(305) 559-4000',email:'landacquisitions@lennar.com',contact:'FL Southeast Division — Land Dept',minlot:'8,000',budget:'$5M+',zips:'33990,33991,33904,33914',activity:'hot',notes:'Third-largest vacant land owner in Lee County per SWFL REIA data. Pays cash, closes 30-45 days.'},
+  {id:2003,name:'Pulte Home Company',type:'National',state:'FL',counties:['Lee County','Sarasota County'],phone:'(248) 433-4800',email:'land@pultegroup.com',contact:'FL Division Land Acquisition',minlot:'10,000',budget:'$2M+',zips:'33904,33914,33990,33991',activity:'active',notes:'Second-largest vacant land owner in Lee County per public records. Pulte Homes, Centex, Del Webb brands.'},
+  {id:2004,name:'Pinnacle Building Solutions',type:'Regional',state:'FL',counties:['Lee County','Charlotte County','Collier County'],phone:'(239) 673-8000',email:'info@pinnaclebuildsolutions.com',contact:'Land Acquisition Department',minlot:'8,000',budget:'$500,000',zips:'33990,33991,33904,33914',activity:'hot',notes:'Cape Coral-based since 2010. Built 2,500+ homes. Buys individual vacant lots directly in Cape Coral. Very active in infill lots.'},
+  {id:2005,name:'Cameratta Companies',type:'Developer',state:'FL',counties:['Lee County'],phone:'(239) 482-7500',email:'info@camerattacompanies.com',contact:'Land Division',minlot:'10,000',budget:'$10M+',zips:'33990,33991,33904,33914,33993',activity:'active',notes:'Major Lee County landowner — 448+ parcels per public records. Focused on master-planned communities.'},
+  {id:2006,name:'Meritage Homes — Florida',type:'National',state:'FL',counties:['Lee County','Manatee County','Sarasota County'],phone:'(480) 515-8100',email:'landacq@meritagehomes.com',contact:'FL Land Acquisition',minlot:'10,000',budget:'$2M+',zips:'33904,33914',activity:'active',notes:'Active in SW Florida. All homes built to Energy Star. SW Division covers Lee County.'},
+  {id:2007,name:'LGI Homes — Florida',type:'National',state:'FL',counties:['Lee County','St. Lucie County','Manatee County'],phone:'(281) 362-8998',email:'landdepartment@lgihomes.com',contact:'FL Division — Land',minlot:'8,000',budget:'$1M+',zips:'33990,33993',activity:'active',notes:'Fastest-growing national builder. Affordable entry-level focus. Fast land buyer.'},
+  {id:2008,name:'Taylor Morrison — Naples',type:'National',state:'FL',counties:['Collier County','Lee County'],phone:'(480) 840-8100',email:'landacquisitions@taylormorrison.com',contact:'FL Gulf Coast Division',minlot:'10,000',budget:'$3M+',zips:'34119,34120,34134',activity:'active',notes:'Active in Naples/Collier market. Gulf Coast Division covers SW FL.'},
+  {id:2009,name:'Neal Communities',type:'Regional',state:'FL',counties:['Collier County','Sarasota County','Manatee County'],phone:'(941) 328-1111',email:'info@nealcommunities.com',contact:'Land Department',minlot:'10,000',budget:'$5M+',zips:'34119,34120',activity:'active',notes:'Sarasota-based regional builder. Strong SW FL presence. Family-owned, fast decisions.'},
+  {id:2010,name:'Adams Homes',type:'Regional',state:'FL',counties:['Charlotte County','Lee County'],phone:'(850) 476-8200',email:'land@adamshomes.com',contact:'SW FL Land Acquisition',minlot:'8,000',budget:'$500,000',zips:'33950,33952,33954,33980',activity:'active',notes:'Regional builder active in Charlotte County and Port Charlotte. Buys individual vacant lots.'},
+  {id:2011,name:'KB Home — Florida',type:'National',state:'FL',counties:['Lee County','Hillsborough County'],phone:'(310) 231-4000',email:'land@kbhome.com',contact:'SE Division Land',minlot:'8,000',budget:'$1M+',zips:'33990,33991',activity:'watch',notes:'$920M land investment Q1 2025 nationally. SW FL presence growing. Contact SE Division.'},
+  // ── TEXAS ──
+  {id:2012,name:'D.R. Horton — San Antonio',type:'National',state:'TX',counties:['Bexar County','Comal County','Guadalupe County'],phone:'(210) 497-5600',email:'txland@drhorton.com',contact:'TX South Division — Land',minlot:'10,000',budget:'$5M+',zips:'78245,78250,78251,78254',activity:'hot',notes:'Dominant builder in San Antonio. 81+ communities in Bexar County. Express Homes very active in outer suburbs.'},
+  {id:2013,name:'Lennar Homes — San Antonio',type:'National',state:'TX',counties:['Bexar County','Kendall County'],phone:'(210) 582-4000',email:'txsaland@lennar.com',contact:'SA Division Land Department',minlot:'10,000',budget:'$3M+',zips:'78245,78250,78251',activity:'hot',notes:'Active San Antonio builder. Acquired Rausch Coleman February 2025, expanding TX presence. Fast close.'},
+  {id:2014,name:'Perry Homes — San Antonio',type:'Regional',state:'TX',counties:['Bexar County','Comal County','Guadalupe County'],phone:'(713) 948-6666',email:'land@perryhomes.com',contact:'Land Acquisition — SA Division',minlot:'10,000',budget:'$2M+',zips:'78245,78248,78250,78254',activity:'active',notes:'Largest Texas-based private builder. 50+ year history. Active in 50+ communities. Family-owned.'},
+  {id:2015,name:'Tilson Homes',type:'Regional',state:'TX',counties:['Bexar County','Travis County','Williamson County'],phone:'(512) 836-9100',email:'info@tilsonhomes.com',contact:'Land & Lot Acquisition',minlot:'8,000',budget:'$500,000',zips:'78245,78250,78251',activity:'active',notes:'Texas-only builder. Premier Contractor in San Antonio. Buys individual lots — great for single-lot assignments.'},
+  {id:2016,name:'PulteGroup — San Antonio',type:'National',state:'TX',counties:['Bexar County','Comal County'],phone:'(210) 494-4300',email:'txland@pultegroup.com',contact:'TX Division — James Reed',minlot:'10,000',budget:'$3M+',zips:'78245,78250',activity:'active',notes:'Centex brand targets entry-level. Quarterly land committee. Dedicated acquisitions staff.'},
+  {id:2017,name:'Meritage Homes — San Antonio',type:'National',state:'TX',counties:['Bexar County','Comal County'],phone:'(480) 515-8100',email:'txland@meritagehomes.com',contact:'TX South Division',minlot:'10,000',budget:'$2M+',zips:'78245,78250,78254',activity:'active',notes:'Energy-efficient focus. Contact TX South Division for San Antonio acquisitions.'},
+  {id:2018,name:'D.R. Horton — Austin',type:'National',state:'TX',counties:['Travis County','Williamson County','Hays County'],phone:'(512) 342-5700',email:'austinland@drhorton.com',contact:'Austin Division — Land',minlot:'10,000',budget:'$5M+',zips:'78660,78664,78626',activity:'hot',notes:'Top builder in Austin metro. Williamson County high volume focus. Express Homes very active.'},
+  {id:2019,name:'Taylor Morrison — Austin',type:'National',state:'TX',counties:['Travis County','Williamson County'],phone:'(480) 840-8100',email:'austinland@taylormorrison.com',contact:'Austin Division Land',minlot:'10,000',budget:'$3M+',zips:'78660,78626,78681',activity:'active',notes:'Strong Austin presence. Move-up and luxury. Master-planned community developer.'},
+  // ── CALIFORNIA ──
+  {id:2020,name:'D.R. Horton — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 697-6000',email:'caland@drhorton.com',contact:'CA Inland Empire Division',minlot:'10,000',budget:'$5M+',zips:'92503,92504,92505,92553',activity:'hot',notes:'Top 5 builder in Riverside/San Bernardino per Zonda March 2026 data. 80+ builders active in Inland Empire.'},
+  {id:2021,name:'Lennar Homes — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 808-5700',email:'caisland@lennar.com',contact:'IE Division Land',minlot:'10,000',budget:'$5M+',zips:'92503,92508,92553',activity:'hot',notes:'Active in Inland Empire with 41+ communities. Fastest-growing CA market. Buys finished lots and raw land.'},
+  {id:2022,name:'KB Home — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(310) 231-4000',email:'caisland.land@kbhome.com',contact:'CA Inland Empire Division',minlot:'8,000',budget:'$3M+',zips:'92503,92504,92505',activity:'hot',notes:'$2.84B national land investment 2024, up 58%. Inland Empire is a priority market.'},
+  {id:2023,name:'Century Communities — California',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(303) 770-8300',email:'caland@centurycommunities.com',contact:'CA Division Land',minlot:'8,000',budget:'$2M+',zips:'92503,92553,92557',activity:'active',notes:'Active in Inland Empire. Budget-friendly product. Strong CA presence.'},
+  {id:2024,name:'Meritage Homes — Southern CA',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(480) 515-8100',email:'caland@meritagehomes.com',contact:'SoCal Division Land',minlot:'10,000',budget:'$3M+',zips:'92503,92508',activity:'active',notes:'Energy Star builder. Active Inland Empire presence. Quarterly land review committee.'},
+  {id:2025,name:'Toll Brothers — California',type:'National',state:'CA',counties:['Los Angeles County','Orange County','San Diego County'],phone:'(949) 753-4004',email:'caland@tollbrothers.com',contact:'CA Division — Land Acquisitions',minlot:'15,000',budget:'$10M+',zips:'90210,91001,92660',activity:'active',notes:'Luxury builder. High-value lots in coastal and foothill communities. CA division based in Irvine.'},
+  // ── ARIZONA ──
+  {id:2026,name:'D.R. Horton — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 956-4000',email:'azland@drhorton.com',contact:'AZ Division — Land (HBACA Vice Chairman)',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323,85301',activity:'hot',notes:'Top builder in Phoenix metro. HBACA Vice Chairman role. Express and Freedom Homes active in outer suburbs.'},
+  {id:2027,name:'Lennar Homes — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 437-1300',email:'azland@lennar.com',contact:'AZ Division Land (HBACA Treasurer)',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323',activity:'hot',notes:'HBACA Treasurer. Major AZ land buyer. Fast acquisition — 30 day close on finished lots.'},
+  {id:2028,name:'Taylor Morrison — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 840-8100',email:'azland@taylormorrison.com',contact:'AZ Division (HBACA Past Chairman)',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323',activity:'hot',notes:'HBACA Immediate Past Chairman. Move-up and lifestyle communities. Strong government relationships.'},
+  {id:2029,name:'Meritage Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 515-8100',email:'azland@meritagehomes.com',contact:'AZ Division — Rebecca Lundberg (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323,85340',activity:'active',notes:'HBACA board member. Energy Star construction. Pinal County expansion focus.'},
+  {id:2030,name:'PulteGroup — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 368-7500',email:'azland@pultegroup.com',contact:'AZ Division — Michelle Gregorec (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. Del Webb active adult + Pulte Homes brands. Dedicated land acquisitions staff.'},
+  {id:2031,name:'K. Hovnanian — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(732) 747-7800',email:'azland@khov.com',contact:'AZ Division — Vaughn Wright (HBACA Board)',minlot:'10,000',budget:'$2M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. Acquires finished lots in master-planned communities.'},
+  {id:2032,name:'Century Communities — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(303) 770-8300',email:'azland@centurycommunities.com',contact:'AZ Division — Taylor Lilly (HBACA Board)',minlot:'8,000',budget:'$2M+',zips:'85338,85339,85323',activity:'active',notes:'HBACA board member. Starlight Homes brand (affordable) active in AZ.'},
+  {id:2033,name:'Beazer Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(770) 829-3700',email:'azland@beazer.com',contact:'AZ Division — Joe Vannelli (HBACA Board)',minlot:'8,000',budget:'$1.5M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. National builder. Energy-efficient homes.'},
+  {id:2034,name:'Mattamy Homes — Arizona',type:'National',state:'AZ',counties:['Pinal County','Maricopa County'],phone:'(647) 479-9696',email:'azland@mattamyhomes.com',contact:'AZ Division — Don Barrineau (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85138,85142,85193',activity:'active',notes:'HBACA board member. Pinal County focus for master-planned communities.'},
+  // ── SOUTH CAROLINA ──
+  {id:2035,name:'D.R. Horton — Charleston',type:'National',state:'SC',counties:['Charleston County','Berkeley County','Dorchester County'],phone:'(843) 760-8100',email:'scland@drhorton.com',contact:'SC Division — Land',minlot:'8,000',budget:'$2M+',zips:'29401,29403,29405,29455',activity:'hot',notes:'Top builder in Charleston metro. Express Homes very active. Cash buyer, 30-45 day close.'},
+  {id:2036,name:'Lennar Homes — Charleston',type:'National',state:'SC',counties:['Charleston County','Berkeley County','Dorchester County'],phone:'(843) 576-8300',email:'scland@lennar.com',contact:'SC Division Land',minlot:'8,000',budget:'$2M+',zips:'29401,29405,29455',activity:'active',notes:'Active in Low Country SC. Fast close — 45 days max.'},
+  {id:2037,name:'LGI Homes — South Carolina',type:'National',state:'SC',counties:['Charleston County','Horry County','Richland County'],phone:'(281) 362-8998',email:'scland@lgihomes.com',contact:'SE Division — Land',minlot:'6,000',budget:'$1M+',zips:'29401,29405,29445',activity:'active',notes:'Fastest-growing builder in SC. Affordable zero-down communities. High-volume lot acquirer.'},
+  {id:2038,name:'Meritage Homes — South Carolina',type:'National',state:'SC',counties:['Charleston County','Greenville County'],phone:'(480) 515-8100',email:'scland@meritagehomes.com',contact:'SE Division Land',minlot:'8,000',budget:'$1.5M+',zips:'29401,29403,29609',activity:'active',notes:'Energy-efficient builder. Greenville and Charleston primary markets.'},
+  {id:2039,name:'Stanley Martin Homes — SC',type:'Regional',state:'SC',counties:['Charleston County','York County'],phone:'(703) 680-3000',email:'land@stanleymartin.com',contact:'SE Division — Land Acquisitions',minlot:'8,000',budget:'$1M+',zips:'29401,29720',activity:'active',notes:'Mid-Atlantic/SE regional builder. Also active in NC, VA, MD, GA, FL.'},
+  {id:2040,name:'D.R. Horton — Myrtle Beach',type:'National',state:'SC',counties:['Horry County'],phone:'(843) 946-2100',email:'mbland@drhorton.com',contact:'Myrtle Beach Division — Land',minlot:'8,000',budget:'$2M+',zips:'29572,29575,29577,29579',activity:'hot',notes:'Very active in Horry County. Grand Strand is one of fastest-growing US markets. Pays cash, closes fast on individual lots.'},
+  {id:2041,name:'Dream Finders Homes — SC',type:'National',state:'SC',counties:['Horry County','Charleston County'],phone:'(904) 928-8000',email:'scland@dreamfindershomes.com',contact:'SC Division Land',minlot:'8,000',budget:'$1.5M+',zips:'29572,29575,29579',activity:'active',notes:'Acquired Liberty Communities January 2025. Growing SC presence. Active land buyer.'},
+  // ── NORTH CAROLINA ──
+  {id:2042,name:'D.R. Horton — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(704) 731-8000',email:'ncland@drhorton.com',contact:'Charlotte Division — Land',minlot:'8,000',budget:'$3M+',zips:'28201,28202,28203,28204',activity:'hot',notes:'Top builder in Charlotte — 1,326 closings 2023, 75% market share among top 10. Very aggressive land buyer.'},
+  {id:2043,name:'Lennar Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Iredell County'],phone:'(704) 566-8000',email:'ncland@lennar.com',contact:'Charlotte Division Land',minlot:'8,000',budget:'$3M+',zips:'28201,28202,28212,28213',activity:'hot',notes:'Major Charlotte builder. Acquired Rausch Coleman Feb 2025 expanding SE presence.'},
+  {id:2044,name:'True Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County','Rowan County'],phone:'(704) 824-1660',email:'land@truehomes.com',contact:'Land Acquisition Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,28110,28025',activity:'hot',notes:'Only NC-based company in Charlotte top 10. 1,141 closings 2023, 10% market share. Active buyer of individual lots.'},
+  {id:2045,name:'Ryan Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(703) 956-4000',email:'ncland@nvrinc.com',contact:'NVR Inc — Charlotte Division',minlot:'8,000',budget:'$2M+',zips:'28201,28202,28027,28025',activity:'active',notes:'23 communities in Mecklenburg County. NVR subsidiary. A+ rated builder.'},
+  {id:2046,name:'Meritage Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(480) 515-8100',email:'ncland@meritagehomes.com',contact:'SE Division Land',minlot:'8,000',budget:'$2M+',zips:'28201,28202,28110',activity:'active',notes:'Active in Charlotte. 300+ communities in 9 states. Energy Star standard.'},
+  {id:2047,name:'Eastwood Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Wake County','Guilford County'],phone:'(704) 399-2424',email:'land@eastwoodhomes.com',contact:'Land Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,27601,27602',activity:'active',notes:'NC/SC regional builder. Charlotte and Raleigh markets. Builds on individual lots — great for single-lot assignments.'},
+  {id:2048,name:'D.R. Horton — Raleigh',type:'National',state:'NC',counties:['Wake County','Johnston County','Durham County'],phone:'(919) 645-6000',email:'raleighland@drhorton.com',contact:'Raleigh Division — Land',minlot:'8,000',budget:'$3M+',zips:'27601,27602,27603,27604',activity:'hot',notes:'Wake County added 66,000 units 2020-2024 — 6th most in US. Very active land buyer.'},
+  {id:2049,name:'Lennar Homes — Raleigh',type:'National',state:'NC',counties:['Wake County','Johnston County','Chatham County'],phone:'(919) 651-2100',email:'raleighland@lennar.com',contact:'Raleigh Division Land',minlot:'8,000',budget:'$3M+',zips:'27601,27602,27520',activity:'hot',notes:'Strong Raleigh presence. Buying aggressively in Chatham and Johnston counties.'},
+  {id:2050,name:'Ashton Woods — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Wake County'],phone:'(678) 784-4000',email:'land@ashtonwoods.com',contact:'SE Division Land',minlot:'10,000',budget:'$2M+',zips:'28201,28202,27601',activity:'active',notes:'2023 Builder of the Year (BUILDER magazine). Design-forward homes. Active in Charlotte and Raleigh.'},
+  {id:2051,name:'Stanley Martin Homes — Raleigh',type:'Regional',state:'NC',counties:['Wake County','Durham County','Chatham County'],phone:'(703) 680-3000',email:'raleighland@stanleymartin.com',contact:'Raleigh Division Land',minlot:'8,000',budget:'$1.5M+',zips:'27601,27701,27513',activity:'active',notes:'Active in Raleigh-Durham. Also active in SC, VA, MD, GA, FL.'},
+  {id:2052,name:'Brookfield Residential — NC',type:'National',state:'NC',counties:['Wake County','Durham County'],phone:'(403) 231-8900',email:'ncland@brookfieldresidential.com',contact:'SE Division Land',minlot:'10,000',budget:'$3M+',zips:'27601,27602,27701',activity:'active',notes:'Canadian-backed US developer. Master-planned community focus. Strong financial backing for large acquisitions.'},
+];
+
+// ═══════════════════════════════════════════
+// BUYER SIDEBAR
+// ═══════════════════════════════════════════
+function buildBuyerNav() {
+  const states=Object.keys(STATES);
+  document.getElementById('buyer-state-nav').innerHTML=states.map(st=>{
+    const sCnt=buyers.filter(b=>b.state===st).length;
+    const counties=[...new Set(buyers.filter(b=>b.state===st).flatMap(b=>b.counties||[]))].sort();
+    const on=buyerState===st;
+    return `<div class="nav-item${on?' active':''}" style="border-left:2px solid ${on?'var(--gold)':'transparent'}" onclick="setBuyerFilter('${st}','',this)">
+        <span>${STATES[st].flag} ${STATES[st].name}</span>
+        <span class="nav-badge">${sCnt}</span>
+      </div>
+      ${on?counties.map(c=>{
+        const cCnt=buyers.filter(b=>b.state===st&&(b.counties||[]).includes(c)).length;
+        return `<div class="ter-co${buyerCounty===c?' on':''}" onclick="setBuyerFilter('${st}','${c}',this)">
+          <span>${c}</span><span class="cnt">${cCnt}</span>
+        </div>`;
+      }).join(''):''}`;
+  }).join('');
+  document.getElementById('nb-buyers').textContent=buyers.length;
+}
+
+function setBuyerFilter(state,county,el) {
+  if(buyerState===state&&buyerCounty===county){buyerState='';buyerCounty='';}
+  else{buyerState=state;buyerCounty=county;}
+  document.querySelectorAll('#buyer-nav .nav-item,.ter-co').forEach(e=>e.classList.remove('active','on'));
+  if(!state) document.getElementById('bsi-all').classList.add('active');
+  buildBuyerNav();
+  renderBuyers();
+}
+
+// ═══════════════════════════════════════════
+// BUYER RENDER
+// ═══════════════════════════════════════════
+function filteredBuyers() {
+  const s   =(document.getElementById('bsrch')||{value:''}).value.toLowerCase();
+  const fty =(document.getElementById('bftype')||{value:''}).value;
+  const fact=(document.getElementById('bfact')||{value:''}).value;
+  return buyers.filter(b=>{
+    const ms =!s||(b.name.toLowerCase().includes(s)||(b.counties||[]).join(' ').toLowerCase().includes(s)||(b.zips||'').includes(s));
+    const mst=!buyerState||b.state===buyerState;
+    const mco=!buyerCounty||(b.counties||[]).some(c=>c===buyerCounty);
+    const mty=!fty||b.type===fty;
+    const mact=!fact||b.activity===fact;
+    return ms&&mst&&mco&&mty&&mact;
+  });
+}
+
+function renderBuyerStats() {
+  const all=filteredBuyers();
+  document.getElementById('buyer-stats').innerHTML=`
+    <div class="stat hi"><div class="stat-lbl">Total buyers</div><div class="stat-val gold">${all.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Hot — buying now</div><div class="stat-val red">${all.filter(b=>b.activity==='hot').length}</div></div>
+    <div class="stat"><div class="stat-lbl">Active</div><div class="stat-val green">${all.filter(b=>b.activity==='active').length}</div></div>
+    <div class="stat"><div class="stat-lbl">National</div><div class="stat-val blue">${all.filter(b=>b.type==='National').length}</div></div>
+    <div class="stat"><div class="stat-lbl">Regional</div><div class="stat-val purple">${all.filter(b=>b.type==='Regional').length}</div></div>
+    <div class="stat"><div class="stat-lbl">Dev / Investor</div><div class="stat-val amber">${all.filter(b=>b.type==='Developer'||b.type==='Investor').length}</div></div>`;
+  document.getElementById('buyer-sub').textContent=
+    (buyerState?STATES[buyerState]?.name:'All states')+(buyerCounty?' · '+buyerCounty:'')+' · '+all.length+' buyers';
+}
+
+function renderBuyers() {
+  renderBuyerStats();
+  const data=filteredBuyers();
+  const content=document.getElementById('buyer-content');
+  if(!data.length){content.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">No buyers match filters.</div>';return;}
+  const states=buyerState?[buyerState]:Object.keys(STATES);
+  let html='';
+  states.forEach(st=>{
+    const stB=data.filter(b=>b.state===st);
+    if(!stB.length)return;
+    const allCounties=[...new Set(stB.flatMap(b=>b.counties||[]))].sort();
+    const showCounties=buyerCounty?[buyerCounty]:allCounties;
+    html+=`<div class="state-section">
+      <div class="state-header">
+        <span class="state-flag">${STATES[st].flag}</span>
+        <span class="state-name">${STATES[st].name}</span>
+        <span class="state-count">${stB.length} buyers</span>
+      </div>`;
+    showCounties.forEach(county=>{
+      const cB=stB.filter(b=>(b.counties||[]).includes(county));
+      if(!cB.length)return;
+      html+=`<div class="county-group">
+        <div class="county-header">${county}<span class="county-count">${cB.length}</span></div>
+        <div class="buyer-grid">${cB.map(b=>buyerCard(b)).join('')}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  content.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--text3)">No buyers for this selection.</div>';
+}
+
+function buyerCard(b) {
+  const aClass=b.activity==='hot'?'ab-hot':b.activity==='active'?'ab-active':'ab-watch';
+  const aLabel=b.activity==='hot'?'Hot':b.activity==='active'?'Active':'Watch';
+  return `<div class="bcard">
+    <div class="bcard-top">
+      <div class="bcard-name">${b.name} <span class="ab ${aClass}">${aLabel}</span></div>
+      <span class="btype bt-${b.type}">${b.type}</span>
+    </div>
+    <div class="bcard-body">
+      ${b.contact?`<span>Contact</span> ${b.contact}<br>`:''}
+      ${b.minlot?`<span>Min lot</span> ${b.minlot} sf · <span>Budget</span> ${b.budget}<br>`:''}
+      ${b.zips?`<span>Zips</span> ${b.zips}<br>`:''}
+    </div>
+    <div class="contact-row">
+      ${b.phone?`<span class="cpill ph" onclick="copy('${b.phone}')" title="Click to copy">&#9742; ${b.phone}</span>`:''}
+      ${b.email?`<span class="cpill em" onclick="copy('${b.email}')" title="Click to copy">&#9993; ${b.email}</span>`:''}
+    </div>
+    <div class="ctags">${(b.counties||[]).map(c=>`<span class="ctag">${c}</span>`).join('')}</div>
+    ${b.notes?`<div style="font-size:10px;color:var(--text3);margin-top:7px;line-height:1.6;border-top:0.5px solid var(--border);padding-top:7px">${b.notes}</div>`:''}
+    <div style="display:flex;gap:5px;margin-top:9px">
+      <button class="btn btn-sm" onclick="openBuyerModal('${b.id}')" style="flex:1;justify-content:center">Edit</button>
+      ${b.manual?`<button class="btn btn-sm btn-red" onclick="delBuyer('${b.id}')" style="padding:3px 7px">✕</button>`:''}
+    </div>
+  </div>`;
+}
+
+function copy(text) {
+  navigator.clipboard.writeText(text)
+    .then(()=>toast('Copied: '+text,true))
+    .catch(()=>{const el=document.createElement('textarea');el.value=text;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast('Copied',true);});
+}
+
+// ═══════════════════════════════════════════
+// BUYER MODAL
+// ═══════════════════════════════════════════
+function openBuyerModal(id) {
+  editBId=id;
+  const b=id?buyers.find(x=>String(x.id)===String(id)):null;
+  document.getElementById('bm-title').textContent=b?'Edit buyer':'Add buyer';
+  const s=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
+  s('b-name',b?.name);s('b-type',b?.type||'National');s('b-state',b?.state||'FL');
+  s('b-phone',b?.phone);s('b-email',b?.email);s('b-contact',b?.contact);
+  s('b-counties',(b?.counties||[]).join(', '));
+  s('b-minlot',b?.minlot);s('b-budget',b?.budget);s('b-zips',b?.zips);
+  s('b-activity',b?.activity||'active');s('b-notes',b?.notes);
+  document.getElementById('buyer-modal').classList.add('open');
+}
+function closeBuyerModal(){document.getElementById('buyer-modal').classList.remove('open');}
+function saveBuyer() {
+  const name=(document.getElementById('b-name').value||'').trim();
+  if(!name){alert('Name required');return;}
+  const data={
+    name,type:document.getElementById('b-type').value,
+    state:document.getElementById('b-state').value,
+    counties:(document.getElementById('b-counties').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    phone:(document.getElementById('b-phone').value||'').trim(),
+    email:(document.getElementById('b-email').value||'').trim(),
+    contact:(document.getElementById('b-contact').value||'').trim(),
+    minlot:(document.getElementById('b-minlot').value||'').trim(),
+    budget:(document.getElementById('b-budget').value||'').trim(),
+    zips:(document.getElementById('b-zips').value||'').trim(),
+    activity:document.getElementById('b-activity').value,
+    notes:(document.getElementById('b-notes').value||'').trim(),
+    manual:true,
+  };
+  if(editBId){
+    const idx=buyers.findIndex(x=>String(x.id)===String(editBId));
+    if(idx>=0)buyers[idx]={...buyers[idx],...data};
+    toast('Buyer updated',true);
+  } else {
+    buyers.push({id:nid++,...data});
+    toast('Buyer added',true);
+  }
+  persist();closeBuyerModal();buildBuyerNav();renderBuyers();
+}
+function delBuyer(id){
+  if(!confirm('Remove this buyer?'))return;
+  buyers=buyers.filter(x=>String(x.id)!==String(id));
+  persist();buildBuyerNav();renderBuyers();toast('Buyer removed');
+}
+
+// ═══════════════════════════════════════════
+// PAGE SWITCHING
+// ═══════════════════════════════════════════
+function switchPage(page, btn) {
+  currentPage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('pipe-nav').style.display  = page==='pipeline'?'block':'none';
+  document.getElementById('buyer-nav').style.display = page==='buyers'?'block':'none';
+  document.getElementById('add-btn').textContent      = page==='pipeline'?'+ Add lead':'+ Add buyer';
+  document.getElementById('add-btn').onclick          = page==='pipeline'?()=>openLeadModal(null):()=>openBuyerModal(null);
+  document.getElementById('sidebar-add-btn').textContent = page==='pipeline'?'+ Add lead':'+ Add buyer';
+  document.getElementById('sidebar-add-btn').onclick     = page==='pipeline'?()=>openLeadModal(null):()=>openBuyerModal(null);
+  if(page==='buyers'){renderBuyers();buildBuyerNav();}
+}
+
+function setView(v,btn){
+  document.querySelectorAll('.vt').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('kanban-view').style.display=v==='kanban'?'block':'none';
+  document.getElementById('table-view').style.display=v==='table'?'block':'none';
+}
+
+// ═══════════════════════════════════════════
+// SAVE / LOAD BACKUP
+// ═══════════════════════════════════════════
+function saveBackup() {
+  const data = {
+    version: 2,
+    savedAt: new Date().toISOString(),
+    leads: leads,
+    buyers_manual: buyers.filter(b => b.manual),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fuchsmonte_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('Backup saved — keep this file safe!', true);
+}
+
+function loadBackup() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.leads) { toast('Invalid backup file'); return; }
+      leads  = (data.leads || []).map(normL);
+      const manual = data.buyers_manual || [];
+      buyers = [...BUYER_DB, ...manual];
+      await persist();
+      if(leads.length){
+        document.getElementById('drop-zone').style.display='none';
+        document.getElementById('lead-content').style.display='block';
+        document.getElementById('import-bar').style.display='flex';
+        document.getElementById('import-msg').innerHTML=`<strong>${leads.length} leads restored</strong> from backup · <strong style="color:var(--green)">${leads.filter(l=>l.score==='A').length} qualified (A)</strong>`;
+        document.getElementById('sync-info').textContent=leads.length+' leads';
+      }
+      selId = null;
+      buildTerNav(); buildBuyerNav(); renderPipeline();
+      toast(leads.length + ' leads restored from backup!', true);
+    } catch(err) {
+      toast('Could not read backup: ' + err.message);
+    }
+  };
+  input.click();
+}
+
+// Update sync indicator after every persist
+const _origPersist = persist;
+persist = async function() {
+  await _origPersist();
+  const el = document.getElementById('sync-info');
+  if (el) el.textContent = leads.length + ' leads · saved ' + new Date().toLocaleTimeString();
+};
+
+// ═══════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════
+function exportCSV() {
+  if(currentPage==='pipeline'){
+    const rows=[['Address','Owner','Phone','Email','State','County','Zip','Lot sf','Est Value','Offer','Equity','Stage','Score','APN','Notes']];
+    leads.forEach(l=>rows.push([l.addr,l.owner,l.phone,l.email,l.state,l.county,l.zip,l.lot,l.price,l.offer,l.equity||'',l.stage,l.score,l.apn||'',l.notes]));
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'));
+    a.download='fuchsmonte_leads_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('Leads exported',true);
+  } else {
+    const rows=[['Name','Type','State','Counties','Phone','Email','Contact','Min Lot','Budget','Zips','Activity','Notes']];
+    filteredBuyers().forEach(b=>rows.push([b.name,b.type,b.state,(b.counties||[]).join('; '),b.phone,b.email,b.contact,b.minlot,b.budget,b.zips,b.activity,b.notes]));
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'));
+    a.download='fuchsmonte_buyers_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('Buyers exported',true);
+  }
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function toast(msg,gold){
+  const t=document.getElementById('toast');
+  document.getElementById('tmsg').textContent=msg;
+  document.getElementById('tdot').className='tdot'+(gold?' g':'');
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ═══════════════════════════════════════════
+// MODAL CLOSE ON BACKDROP
+// ═══════════════════════════════════════════
+['lead-modal','buyer-modal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');});
+});
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+// ── ASYNC INIT — loads from cloud storage first ──
+(async () => {
+  // Show loading state
+  document.getElementById('sync-info').textContent = 'Loading…';
+  await hydrate();
+  if(leads.length){
+    document.getElementById('drop-zone').style.display='none';
+    document.getElementById('lead-content').style.display='block';
+    document.getElementById('import-bar').style.display='flex';
+    document.getElementById('import-msg').innerHTML=`<strong>${leads.length} leads loaded</strong> · <strong style="color:var(--green)">${leads.filter(l=>l.score==='A').length} qualified (A)</strong>`;
+    document.getElementById('sync-info').textContent=leads.length+' leads';
+  } else {
+    document.getElementById('sync-info').textContent='No data';
+  }
+  buildTerNav();
+  buildBuyerNav();
+  renderPipeline();
+})();
+</script>
+</body>
+</html>
