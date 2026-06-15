@@ -396,13 +396,9 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       </div>
       <div class="fgrp full">
         <label>Qualification checks</label>
-        <div class="chk-grid">
-          <label class="chk"><input type="checkbox" id="q0"> Flood Zone X</label>
-          <label class="chk"><input type="checkbox" id="q1"> Residential zoning</label>
-          <label class="chk"><input type="checkbox" id="q2"> No protected species</label>
-          <label class="chk"><input type="checkbox" id="q3"> No main road</label>
-          <label class="chk"><input type="checkbox" id="q4"> Canal/seawall OK</label>
-          <label class="chk"><input type="checkbox" id="q5"> Correct zip</label>
+        <div class="chk-grid" style="grid-template-columns:1fr 1fr">
+          <label class="chk"><input type="checkbox" id="q0"> Residential zoning</label>
+          <label class="chk"><input type="checkbox" id="q1"> Correct zip</label>
         </div>
       </div>
       <div class="fgrp full"><label>Notes</label><textarea id="f-notes"></textarea></div>
@@ -457,8 +453,7 @@ const STATES = {
   CA:{name:'California',flag:'☀️'},AZ:{name:'Arizona',flag:'🌵'},
   SC:{name:'South Carolina',flag:'🌙'},NC:{name:'North Carolina',flag:'🏔️'}
 };
-const QUAL_LABELS  = ['Zone X','Zoning','No species','No main rd','Canal ok','Zip ok'];
-const MAIN_ROADS   = ['pine island','santa barbara','gleason','del prado','cape coral pkwy','coronado','veterans','burnt store','nicholas'];
+const QUAL_LABELS = ['Zoning', 'Zip ok'];
 
 // ═══ FIX 8: Table column definitions for dynamic header rendering ═══
 const TABLE_COLS = [
@@ -592,10 +587,10 @@ function mapRow(row) {
   const addr  = g(row,['Address','address','Property Address','Street Address']);
   const city  = g(row,['City','city']);
   const addrFull = addr + (city?', '+city:'');
-  const mainRd= MAIN_ROADS.some(r=>addr.toLowerCase().includes(r));
-  const q     = [1,1,1,mainRd?0:1,1,1];
+  // 2-check qual: [Zoning, Zip ok] — both default pass
+  const q     = [1, 1];
   const qSum  = q.reduce((a,b)=>a+b,0);
-  const score = qSum===6?'A':qSum>=4?'B':'C';
+  const score = qSum===2?'A':qSum===1?'B':'C';
   const offerAmt = estVal ? Math.round(estVal*0.55) : 0;
   return normL({
     addr:addrFull, rawAddr:addr, city, state,
@@ -614,7 +609,7 @@ function mapRow(row) {
     ownerOccupied:g(row,['Owner Occupied']),
     doNotMail:g(row,['Do Not Mail']),
     propertyType:g(row,['Property Type']),
-    stage:'New', score, q, flags:mainRd?['Possible main road']:[],
+    stage:'New', score, q, flags:[],
     notes:'', source:'Import', importedAt:new Date().toISOString(),
     id: 'L' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
   });
@@ -628,7 +623,7 @@ function normL(l) {
     lot:'—',lotSf:0,estValue:0,price:'—',offerAmt:0,offer:'',equity:0,
     openLoans:0,assessed:0,lastSaleDate:'',lastSaleAmt:0,ownerOccupied:'',
     doNotMail:'',propertyType:'',stage:'New',score:'B',
-    q:[1,1,1,1,1,1],flags:[],notes:'',source:'Manual',importedAt:'',
+    q:[1,1],flags:[],notes:'',source:'Manual',importedAt:'',
     ...l,
     id: stableId,
   };
@@ -732,26 +727,15 @@ async function geocodeAddress(address) {
 // FULL LEAD QUALIFIER
 // ═══════════════════════════════════════════
 async function runApiChecks(lead) {
+  // Qual checks are manual (Zoning + Zip ok).
+  // This just geocodes the address so the 🌊 Flood Map button can use
+  // precise marker= coordinates instead of a text find= search.
   const coords = await geocodeAddress(lead.addr);
   if (!coords) {
-    console.warn('[API Check] Could not geocode:', lead.addr);
+    console.warn('[Geocode] Could not geocode:', lead.addr);
     return lead;
   }
-  const { lat, lng } = coords;
-  const [floodZone, speciesResult] = await Promise.all([
-    checkFloodZone(lat, lng),
-    checkProtectedSpecies(lat, lng)
-  ]);
-  const newQ = [...(lead.q || [1,1,1,1,1,1])];
-  if (floodZone !== null) newQ[0] = (floodZone === 'X' || floodZone === 'X500') ? 1 : 0;
-  if (speciesResult !== null) newQ[2] = speciesResult.hasSpecies ? 0 : 1;
-  const qSum = newQ.reduce((a,b) => a+b, 0);
-  const score = qSum === 6 ? 'A' : qSum >= 4 ? 'B' : 'C';
-  const flags = [...(lead.flags || [])].filter(f => !f.includes('Flood') && !f.includes('species'));
-  if (floodZone && floodZone !== 'X' && floodZone !== 'X500') flags.push(`Flood Zone ${floodZone} — not Zone X`);
-  if (speciesResult?.hasSpecies) flags.push(`Protected species: ${speciesResult.species.slice(0,2).join(', ')}`);
-  return { ...lead, q: newQ, score, flags, floodZone, speciesChecked: true, apiCheckedAt: new Date().toISOString(),
-    _lat: lat, _lng: lng }; // cache for FEMA map viewer
+  return { ...lead, _lat: coords.lat, _lng: coords.lng, apiCheckedAt: new Date().toISOString() };
 }
 
 // ═══════════════════════════════════════════
@@ -765,7 +749,7 @@ async function runBatchApiChecks() {
   const origMsg   = importMsg ? importMsg.innerHTML : '';
   const setProgress = msg => { if (importMsg) importMsg.innerHTML = msg; };
 
-  setProgress(`Verifying flood zones &amp; species for <strong>${unchecked.length} leads</strong>… <span style="color:var(--text3)">(runs in background)</span>`);
+  setProgress(`Geocoding addresses for <strong>${unchecked.length} leads</strong>… <span style="color:var(--text3)">(runs in background)</span>`);
 
   let checked = 0;
   for (const lead of unchecked) {
@@ -775,7 +759,7 @@ async function runBatchApiChecks() {
       if (idx >= 0) leads[idx] = updated;
       checked++;
       const pct = Math.round((checked / unchecked.length) * 100);
-      setProgress(`Checking flood zones &amp; species… <strong>${checked}/${unchecked.length}</strong> (${pct}%)`);
+      setProgress(`Geocoding addresses… <strong>${checked}/${unchecked.length}</strong> (${pct}%)`);
       if (checked % 5 === 0) { renderPipeline(); await persist(); }
       await new Promise(r => setTimeout(r, 200));
     } catch(e) {
@@ -785,7 +769,7 @@ async function runBatchApiChecks() {
   await persist();
   renderPipeline();
   setProgress(origMsg + ` · <strong style="color:var(--green)">✓ ${checked} verified</strong>`);
-  toast(checked + ' leads verified — flood zone & species updated', true);
+  toast(checked + ' leads geocoded', true);
 }
 
 // ═══════════════════════════════════════════
@@ -794,12 +778,12 @@ async function runBatchApiChecks() {
 function recheckLead(id) {
   const lead = leads.find(x => String(x.id) === String(id));
   if (!lead) return;
-  toast('Running flood zone & species check…');
+  toast('Geocoding address…');
   runApiChecks(lead)
     .then(updated => {
       const idx = leads.findIndex(x => String(x.id) === String(id));
       if (idx >= 0) { leads[idx] = updated; persist(); renderPipeline(); }
-      toast('Flood zone & species updated', true);
+      toast('Address geocoded', true);
     })
     .catch(e => {
       console.warn('Re-check failed:', e);
@@ -1067,7 +1051,7 @@ function renderDetail() {
         <option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
       </select>
       <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
-      <button class="btn btn-sm btn-green" onclick="recheckLead('${l.id}')" style="font-size:11px">&#9679; Re-check</button>
+      <button class="btn btn-sm btn-green" onclick="recheckLead('${l.id}')" style="font-size:11px">&#9679; Geocode</button>
       <button class="btn btn-sm" onclick="openFemaMap('${l.id}')" style="font-size:11px;border-color:rgba(74,158,255,0.3);color:var(--blue);background:var(--blue-bg)">🌊 Flood Map</button>
     </div>
   </div>`;
@@ -1179,7 +1163,7 @@ function saveLead(){
     lotSf, estValue, price, offerAmt, offer,
     stage:document.getElementById('f-stage').value,
     score:document.getElementById('f-score').value,
-    q:QUAL_LABELS.map((_,i)=>document.getElementById('q'+i)?.checked?1:0),
+    q: QUAL_LABELS.map((_, i) => document.getElementById('q' + i)?.checked ? 1 : 0),
     notes:(document.getElementById('f-notes').value||'').trim(),
     source:'Manual',
   };
