@@ -750,7 +750,8 @@ async function runApiChecks(lead) {
   const flags = [...(lead.flags || [])].filter(f => !f.includes('Flood') && !f.includes('species'));
   if (floodZone && floodZone !== 'X' && floodZone !== 'X500') flags.push(`Flood Zone ${floodZone} — not Zone X`);
   if (speciesResult?.hasSpecies) flags.push(`Protected species: ${speciesResult.species.slice(0,2).join(', ')}`);
-  return { ...lead, q: newQ, score, flags, floodZone, speciesChecked: true, apiCheckedAt: new Date().toISOString() };
+  return { ...lead, q: newQ, score, flags, floodZone, speciesChecked: true, apiCheckedAt: new Date().toISOString(),
+    _lat: lat, _lng: lng }; // cache for FEMA map viewer
 }
 
 // ═══════════════════════════════════════════
@@ -804,6 +805,51 @@ function recheckLead(id) {
       console.warn('Re-check failed:', e);
       toast('Re-check failed — check console');
     });
+}
+
+// ═══════════════════════════════════════════
+// FEMA NHFL MAP VIEWER
+// Opens the official FEMA National Flood Hazard Layer viewer:
+// https://fema.maps.arcgis.com/apps/webappviewer/index.html?id=c01581a28192417b90b7898ebc323c5c
+//
+// Strategy:
+//   1. If the lead has already been geocoded (apiCheckedAt set), use the
+//      marker= parameter to drop a pin at the exact coordinates.
+//   2. Otherwise, use find= so the app's Search widget locates the address.
+//      ArcGIS WebAppBuilder supports ?find=<encoded address> out of the box.
+// ═══════════════════════════════════════════
+const FEMA_MAP_BASE = 'https://fema.maps.arcgis.com/apps/webappviewer/index.html?id=c01581a28192417b90b7898ebc323c5c';
+
+async function openFemaMap(id) {
+  const lead = leads.find(x => String(x.id) === String(id));
+  if (!lead) return;
+
+  let url;
+
+  // If we have cached coordinates from a prior geocode, use marker + center
+  if (lead._lat && lead._lng) {
+    // marker= format: lng,lat,wkid,title,content
+    const marker = `${lead._lng},${lead._lat},4326,${encodeURIComponent(lead.addr)}`;
+    url = `${FEMA_MAP_BASE}&marker=${marker}&level=17`;
+  } else {
+    // Use find= to trigger the Search widget (works on all ArcGIS WebAppBuilder apps)
+    url = `${FEMA_MAP_BASE}&find=${encodeURIComponent(lead.addr)}`;
+
+    // Geocode in the background so next open can use marker= for precision
+    geocodeAddress(lead.addr).then(coords => {
+      if (coords) {
+        const idx = leads.findIndex(x => String(x.id) === String(id));
+        if (idx >= 0) {
+          leads[idx]._lat = coords.lat;
+          leads[idx]._lng = coords.lng;
+          persist();
+        }
+      }
+    });
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+  toast('Opening FEMA Flood Map…', true);
 }
 
 function importRows(rows, fileName) {
@@ -964,6 +1010,7 @@ function renderTable() {
       <td><span class="sc sc-${l.score}">${l.score}</span></td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-sm" onclick="event.stopPropagation();openLeadModal('${l.id}')" style="padding:3px 7px">Edit</button>
+        <button class="btn btn-sm" onclick="event.stopPropagation();openFemaMap('${l.id}')" style="padding:3px 7px;border-color:rgba(74,158,255,0.3);color:var(--blue);background:var(--blue-bg)" title="Open FEMA Flood Map">🌊</button>
         <button class="btn btn-sm btn-red" onclick="event.stopPropagation();delLead('${l.id}')" style="padding:3px 7px">✕</button>
       </div></td>
     </tr>`;
@@ -1021,6 +1068,7 @@ function renderDetail() {
       </select>
       <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
       <button class="btn btn-sm btn-green" onclick="recheckLead('${l.id}')" style="font-size:11px">&#9679; Re-check</button>
+      <button class="btn btn-sm" onclick="openFemaMap('${l.id}')" style="font-size:11px;border-color:rgba(74,158,255,0.3);color:var(--blue);background:var(--blue-bg)">🌊 Flood Map</button>
     </div>
   </div>`;
 }
