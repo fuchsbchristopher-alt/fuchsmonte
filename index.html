@@ -274,7 +274,7 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       <button class="btn" style="justify-content:center;font-size:11px" onclick="exportCSV()">&#8595; Export CSV</button>
       <button class="btn btn-gold" style="justify-content:center;font-size:11px" onclick="saveBackup()">&#128190; Save backup</button>
       <button class="btn" style="justify-content:center;font-size:11px" onclick="loadBackup()">&#8679; Load backup</button>
-      <button class="btn btn-red" style="justify-content:center;font-size:11px" onclick="clearLeads()">Clear leads</button>
+      <button class="btn btn-red" style="justify-content:center;font-size:11px" onclick="clearLeads()">Clear New leads</button>
     </div>
   </div>
 
@@ -883,16 +883,19 @@ function delLead(id){
   persist();toast('Lead removed');renderPipeline();buildTerNav();
 }
 async function clearLeads(){
-  if(!confirm('Clear ALL leads? This cannot be undone.'))return;
-  leads=[];selId=null;
+  const newCount = leads.filter(l => l.stage === 'New').length;
+  if(newCount === 0){ toast('No New leads to clear'); return; }
+  if(!confirm('Remove ' + newCount + ' leads in New stage? All other stages will be kept.'))return;
+  leads = leads.filter(l => l.stage !== 'New');
+  if(selId && !leads.find(x=>String(x.id)===String(selId))) selId=null;
   await persist();
-  // Also clear old localStorage keys
-  try { localStorage.removeItem('fm_leads'); localStorage.removeItem('fuchsmonte_data'); } catch(e) {}
-  document.getElementById('drop-zone').style.display='block';
-  document.getElementById('lead-content').style.display='none';
-  document.getElementById('import-bar').style.display='none';
-  document.getElementById('sync-info').textContent='No data';
-  renderPipeline();buildTerNav();toast('All leads cleared');
+  if(!leads.length){
+    document.getElementById('drop-zone').style.display='block';
+    document.getElementById('lead-content').style.display='none';
+    document.getElementById('import-bar').style.display='none';
+    document.getElementById('sync-info').textContent='No data';
+  }
+  renderPipeline();buildTerNav();toast('Removed ' + newCount + ' New leads');
 }
 
 // ═══════════════════════════════════════════
