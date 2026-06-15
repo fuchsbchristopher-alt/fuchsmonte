@@ -223,6 +223,48 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
 .tdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 .tdot.g{background:var(--gold)}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* ══ OUTREACH PAGE ══ */
+.outreach-layout{display:grid;grid-template-columns:260px 1fr;gap:10px;margin-bottom:14px;min-height:420px}
+.ol-panel{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
+.ol-hd{padding:9px 12px;border-bottom:0.5px solid var(--border);font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ol-list{overflow-y:auto;flex:1}
+.ol-card{padding:9px 12px;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s;border-left:2px solid transparent}
+.ol-card:hover{background:var(--bg3)}
+.ol-card.sel{background:var(--gold-dim);border-left-color:var(--gold)}
+.ol-addr{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px}
+.ol-meta{font-size:10px;color:var(--text3)}
+.compose-panel{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden}
+.compose-split{display:grid;grid-template-columns:240px 1fr;flex:1;overflow:hidden;border-bottom:0.5px solid var(--border)}
+.buyers-col{border-right:0.5px solid var(--border);padding:10px;overflow-y:auto}
+.email-col{padding:10px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.bcol-hd{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.bm-row{display:flex;align-items:flex-start;gap:7px;padding:4px 0;cursor:pointer;border-bottom:0.5px solid var(--border);font-size:11px}
+.bm-row:last-child{border-bottom:none}
+.bm-row input{accent-color:var(--gold);width:13px;height:13px;margin-top:2px;flex-shrink:0}
+.bm-info{flex:1;min-width:0}
+.bm-name{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.bm-sub{font-size:10px;color:var(--text3)}
+.match-pip{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px}
+.mp-zip{background:var(--gold-dim2);color:var(--gold)}
+.mp-county{background:var(--blue-bg);color:var(--blue)}
+.mp-state{background:rgba(255,255,255,0.05);color:var(--text3)}
+.email-subj-inp{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:6px 9px;font-size:12px;font-family:inherit}
+.email-subj-inp:focus{outline:none;border-color:rgba(201,168,76,0.4)}
+.email-body-inp{width:100%;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:7px 9px;font-size:11px;font-family:inherit;resize:none;flex:1;min-height:200px;line-height:1.55}
+.email-body-inp:focus{outline:none;border-color:rgba(201,168,76,0.4)}
+.compose-foot{padding:9px 12px;display:flex;align-items:center;gap:7px;flex-shrink:0}
+/* Tracker */
+.tracker-wrap{margin-top:4px}
+.os{font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;white-space:nowrap}
+.os-sent{background:var(--blue-bg);color:var(--blue)}
+.os-draft{background:rgba(255,255,255,0.05);color:var(--text3)}
+.os-interested{background:var(--green-bg);color:var(--green)}
+.os-not{background:var(--red-bg);color:var(--red)}
+.os-noresp{background:var(--amber-bg);color:var(--amber)}
+/* Send preview modal */
+.send-row{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px}
+.send-row pre{font-size:10px;color:var(--text2);white-space:pre-wrap;max-height:100px;overflow-y:auto;background:var(--bg4);padding:7px;border-radius:4px;font-family:inherit;margin-top:7px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -238,6 +280,7 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
   <div class="topbar-center">
     <button class="top-tab active" onclick="switchPage('pipeline',this)">&#9646; Pipeline</button>
     <button class="top-tab" onclick="switchPage('buyers',this)">&#128101; Buyer CRM</button>
+    <button class="top-tab" onclick="switchPage('outreach',this)">&#128228; Outreach</button>
   </div>
   <div class="topbar-right">
     <span id="sync-info" style="font-size:11px;color:var(--text3)">No data</span>
@@ -269,6 +312,28 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
         All states <span class="nav-badge" id="nb-buyers">0</span>
       </div>
       <div id="buyer-state-nav"></div>
+    </div>
+
+    <!-- Outreach nav -->
+    <div id="outreach-nav" style="display:none">
+      <div class="sidebar-label">Outreach</div>
+      <div class="nav-item active" id="onav-all">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+        Ready to Send <span class="nav-badge g" id="nb-ready">0</span>
+      </div>
+      <div class="sidebar-label" style="margin-top:8px">Tracker</div>
+      <div class="nav-item" onclick="scrollToTracker()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        All records <span class="nav-badge" id="nb-outreach">0</span>
+      </div>
+      <div class="nav-item" onclick="showFollowUpsDue()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Follow-ups due <span class="nav-badge" id="nb-fudue" style="background:var(--red-bg);color:var(--red)">0</span>
+      </div>
+      <div class="sidebar-bottom" style="border-top:0.5px solid var(--border);padding:10px 14px">
+        <button class="btn btn-sm btn-gold" style="justify-content:center" onclick="openMyInfoModal()">⚙ My Info / Signature</button>
+        <button class="btn btn-sm" style="justify-content:center;margin-top:5px;font-size:11px" onclick="exportOutreachCSV()">↓ Export tracker CSV</button>
+      </div>
     </div>
 
     <div class="sidebar-bottom">
@@ -370,6 +435,82 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       <div id="buyer-content"></div>
     </div>
 
+    <!-- ═══ OUTREACH PAGE ═══ -->
+    <div class="page" id="page-outreach">
+      <div class="ph">
+        <div>
+          <div class="ph-title">Email <span>Outreach</span></div>
+          <div class="ph-sub" id="outreach-sub">Mark lots Ready to Send in the Pipeline, then compose and track emails here</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-sm" onclick="openMyInfoModal()">⚙ My Info</button>
+          <button class="btn btn-sm" onclick="exportOutreachCSV()">↓ Export CSV</button>
+        </div>
+      </div>
+
+      <div class="stats" id="outreach-stats" style="grid-template-columns:repeat(5,1fr)"></div>
+
+      <div class="outreach-layout">
+        <!-- Left: ready lots list -->
+        <div class="ol-panel">
+          <div class="ol-hd">
+            <span>Ready to Send</span>
+            <span id="nb-ready-hd" style="color:var(--text3);font-weight:400">0 lots</span>
+          </div>
+          <div class="ol-list" id="outreach-lots">
+            <div style="padding:20px;text-align:center;color:var(--text3);font-size:11px">
+              No lots marked yet.<br>
+              In the Pipeline, click a lead then hit<br>
+              <strong style="color:var(--gold)">📤 Ready to Send</strong> in the action bar.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: compose + matched buyers -->
+        <div class="compose-panel" id="outreach-compose">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">
+            ← Select a lot from the list to see matched builders &amp; buyers and compose an email
+          </div>
+        </div>
+      </div>
+
+      <!-- Tracker table -->
+      <div class="tracker-wrap" id="outreach-tracker-section">
+        <div class="ph" style="margin-bottom:8px">
+          <div class="tracker-title" style="font-size:14px;font-weight:700;color:var(--text)">Outreach <span style="color:var(--gold)">Tracker</span></div>
+          <div id="tracker-filters" style="display:flex;gap:6px">
+            <select class="fi" id="tracker-filter-status" onchange="renderOutreachTracker()" style="font-size:11px">
+              <option value="">All statuses</option>
+              <option value="sent">Sent</option>
+              <option value="drafted">Drafted</option>
+            </select>
+            <select class="fi" id="tracker-filter-fu" onchange="renderOutreachTracker()" style="font-size:11px">
+              <option value="">All follow-ups</option>
+              <option value="interested">Interested</option>
+              <option value="not_interested">Not Interested</option>
+              <option value="no_response">No Response</option>
+              <option value="due">Due today</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Lot address</th>
+              <th>Builder / buyer</th>
+              <th>Date sent</th>
+              <th>Status</th>
+              <th>Response</th>
+              <th>Next follow-up</th>
+              <th>Notes</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="outreach-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -435,6 +576,43 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
     <div class="modal-ft">
       <button class="btn" onclick="closeBuyerModal()">Cancel</button>
       <button class="btn btn-gold" onclick="saveBuyer()">Save buyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MY INFO MODAL -->
+<div class="modal-bg" id="myinfo-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-hd"><div class="modal-title">⚙ My Info &amp; Email Signature</div><button class="modal-x" onclick="closeMyInfoModal()">×</button></div>
+    <p style="font-size:11px;color:var(--text3);margin-bottom:12px">This information is used to auto-fill the email signature on all outreach. Saved locally on your device.</p>
+    <div class="fg">
+      <div class="fgrp"><label>Your name</label><input type="text" id="mi-name" placeholder="John Smith"></div>
+      <div class="fgrp"><label>Company</label><input type="text" id="mi-company" placeholder="Fuchsmonte Holding"></div>
+      <div class="fgrp"><label>Phone</label><input type="text" id="mi-phone" placeholder="(239) 555-0100"></div>
+      <div class="fgrp"><label>Email</label><input type="email" id="mi-email" placeholder="john@fuchsmonte.com"></div>
+      <div class="fgrp full"><label>Website (optional)</label><input type="text" id="mi-website" placeholder="www.fuchsmonte.com"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeMyInfoModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveMyInfo()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEND PREVIEW MODAL -->
+<div class="modal-bg" id="send-modal">
+  <div class="modal" style="width:620px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">📧 Send Emails</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="send-modal-lead"></div>
+      </div>
+      <button class="modal-x" onclick="closeSendModal()">×</button>
+    </div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Click <strong>Open in Mail</strong> to send each email from your mail client. The email is pre-filled and ready to send — just hit send. Each click is logged in the Outreach Tracker.</p>
+    <div id="send-modal-body" style="max-height:55vh;overflow-y:auto"></div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeSendModal()">Close</button>
     </div>
   </div>
 </div>
@@ -516,7 +694,7 @@ async function persist() {
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
-      body: JSON.stringify({ id: 'main', leads: data.leads, buyers_manual: data.buyers_manual, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ id: 'main', leads: data.leads, buyers_manual: data.buyers_manual, outreach: outreach, updated_at: new Date().toISOString() })
     });
   } catch(e) { console.error('Supabase save error:', e); }
   try { localStorage.setItem('fm_backup', JSON.stringify(data)); } catch(e) {}
@@ -551,6 +729,7 @@ async function hydrate() {
     const manual = data.buyers_manual || [];
     // ═══ FIX 2 applied here ═══
     buyers = mergeBuyers(BUYER_DB, manual);
+    outreach = data.outreach || [];
     // ═══ FIX 6: removed unused `savedAt` variable ═══
     console.log('[Fuchsmonte] Loaded', leads.length, 'leads');
   } else {
@@ -623,7 +802,7 @@ function normL(l) {
     lot:'—',lotSf:0,estValue:0,price:'—',offerAmt:0,offer:'',equity:0,
     openLoans:0,assessed:0,lastSaleDate:'',lastSaleAmt:0,ownerOccupied:'',
     doNotMail:'',propertyType:'',stage:'New',score:'B',
-    q:[1,1],flags:[],notes:'',source:'Manual',importedAt:'',
+    q:[1,1],flags:[],notes:'',source:'Manual',importedAt:'',readyToSend:false,
     ...l,
     id: stableId,
   };
@@ -952,7 +1131,7 @@ function renderKanban() {
           <div class="kc-meta">${l.owner||'—'}</div>
           <div class="kc-row"><span class="kc-val">${l.price}</span><span class="kc-zip">${l.zip}</span></div>
           <div class="pips">${(l.q||[]).map(v=>`<div class="pip ${v?'on':'off'}"></div>`).join('')}</div>
-          <span class="sc sc-${l.score}">${l.score}</span>
+          <span class="sc sc-${l.score}">${l.score}</span>${l.readyToSend?'<span style="font-size:9px;background:rgba(201,168,76,0.2);color:var(--gold);padding:1px 4px;border-radius:3px;margin-left:3px">📤</span>':''}
         </div>`).join('')}
     </div>`;
   }).join('');
@@ -1053,6 +1232,7 @@ function renderDetail() {
       <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
       <button class="btn btn-sm btn-green" onclick="recheckLead('${l.id}')" style="font-size:11px">&#9679; Geocode</button>
       <button class="btn btn-sm" onclick="openFemaMap('${l.id}')" style="font-size:11px;border-color:rgba(74,158,255,0.3);color:var(--blue);background:var(--blue-bg)">🌊 Flood Map</button>
+      <button class="btn btn-sm${l.readyToSend?' btn-gold':''}" onclick="toggleReadyToSend('${l.id}')" style="font-size:11px">📤 ${l.readyToSend?'✓ Ready to Send':'Mark Ready to Send'}</button>
     </div>
   </div>`;
 }
@@ -1430,13 +1610,16 @@ function switchPage(page, btn) {
   document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   btn.classList.add('active');
-  document.getElementById('pipe-nav').style.display  = page==='pipeline'?'block':'none';
-  document.getElementById('buyer-nav').style.display = page==='buyers'?'block':'none';
-  document.getElementById('add-btn').textContent      = page==='pipeline'?'+ Add lead':'+ Add buyer';
-  document.getElementById('add-btn').onclick          = page==='pipeline'?()=>openLeadModal(null):()=>openBuyerModal(null);
-  document.getElementById('sidebar-add-btn').textContent = page==='pipeline'?'+ Add lead':'+ Add buyer';
-  document.getElementById('sidebar-add-btn').onclick     = page==='pipeline'?()=>openLeadModal(null):()=>openBuyerModal(null);
+  document.getElementById('pipe-nav').style.display    = page==='pipeline'?'block':'none';
+  document.getElementById('buyer-nav').style.display   = page==='buyers'?'block':'none';
+  document.getElementById('outreach-nav').style.display= page==='outreach'?'block':'none';
+  const isPipe = page==='pipeline';
+  document.getElementById('add-btn').textContent = isPipe?'+ Add lead':page==='buyers'?'+ Add buyer':'+ Add lead';
+  document.getElementById('add-btn').onclick     = isPipe?()=>openLeadModal(null):page==='buyers'?()=>openBuyerModal(null):()=>openLeadModal(null);
+  document.getElementById('sidebar-add-btn').textContent = isPipe?'+ Add lead':page==='buyers'?'+ Add buyer':'+ Add lead';
+  document.getElementById('sidebar-add-btn').onclick     = isPipe?()=>openLeadModal(null):page==='buyers'?()=>openBuyerModal(null):()=>openLeadModal(null);
   if(page==='buyers'){renderBuyers();buildBuyerNav();}
+  if(page==='outreach'){renderOutreachPage();}
 }
 
 function setView(v,btn){
@@ -1518,9 +1701,429 @@ function toast(msg,gold){
 // ═══════════════════════════════════════════
 // MODAL CLOSE ON BACKDROP
 // ═══════════════════════════════════════════
-['lead-modal','buyer-modal'].forEach(id=>{
+['lead-modal','buyer-modal','myinfo-modal','send-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');});
 });
+
+// ═══════════════════════════════════════════
+// OUTREACH STATE
+// ═══════════════════════════════════════════
+let outreach = [];
+let selOutreachLot = null;
+let selOutreachBuyers = new Set();
+let myInfo = {};
+
+function loadMyInfo() {
+  try { myInfo = JSON.parse(localStorage.getItem('fm_myinfo') || '{}'); } catch(e) { myInfo = {}; }
+}
+function saveMyInfoToStorage() {
+  try { localStorage.setItem('fm_myinfo', JSON.stringify(myInfo)); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+// BUYER MATCHING
+// ═══════════════════════════════════════════
+function matchBuyersForLot(lead) {
+  if (!lead) return [];
+  const leadZips = (lead.zip || '').split(',').map(z => z.trim()).filter(Boolean);
+  return buyers
+    .map(b => {
+      let score = 0;
+      if (b.state === lead.state) score += 1;
+      if ((b.counties || []).some(c => c.toLowerCase() === (lead.county || '').toLowerCase())) score += 2;
+      const bZips = (b.zips || '').split(',').map(z => z.trim());
+      if (leadZips.some(z => bZips.includes(z))) score += 3;
+      return { ...b, matchScore: score };
+    })
+    .filter(b => b.matchScore > 0)
+    .sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      const ord = { hot:0, active:1, watch:2 };
+      return (ord[a.activity]||1) - (ord[b.activity]||1);
+    });
+}
+
+// ═══════════════════════════════════════════
+// EMAIL GENERATION
+// ═══════════════════════════════════════════
+function generateEmailSubject(lead) {
+  const city = lead.city || (lead.addr.split(',')[1]||'').trim();
+  const price = lead.offerAmt ? '$'+lead.offerAmt.toLocaleString() : (lead.price!=='—'?lead.price:'');
+  return `Off-Market Land – ${city}, ${lead.state} | ${lead.lot} SF${price?' | '+price:''}`;
+}
+
+function generateEmailBody(lead, buyer) {
+  loadMyInfo();
+  const mi = myInfo;
+  const contactName = buyer.contact ? buyer.contact.split('—')[0].split('-')[0].trim() : buyer.name;
+  const city = lead.city || (lead.addr.split(',')[1]||'').trim();
+  const lotSfNum = parseFloat(String(lead.lot||'').replace(/,/g,'')) || 0;
+  const acres = lotSfNum ? ' ('+(lotSfNum/43560).toFixed(2)+' ac)' : '';
+  const lotDisplay = (lead.lot||'—') + ' SF' + acres;
+  const price = lead.price && lead.price!=='—' ? lead.price : 'Contact for price';
+  const zoning   = lead.zoning   || 'Residential (verify with county)';
+  const utilities = lead.utilities || 'Please verify with county';
+  const floodZone = lead.floodZone || 'See FEMA FRESH Map';
+
+  return `Hi ${contactName},
+
+I have an off-market land opportunity that fits your buying criteria in ${lead.county||lead.state}.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROPERTY DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Address:        ${lead.addr}
+City / State:   ${city}, ${lead.state} ${lead.zip}
+County:         ${lead.county||'—'}
+APN / Parcel:   ${lead.apn||'Available on request'}
+Lot Size:       ${lotDisplay}
+Zoning:         ${zoning}
+Utilities:      ${utilities}
+Flood Zone:     ${floodZone}
+Asking Price:   ${price}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${lead.notes ? lead.notes+'\n\n' : ''}This is available on a first-come, first-served basis. Please reach out if this fits your acquisition criteria — I'm happy to share photos, surveys, or additional details.
+
+Best regards,
+
+${mi.name||'[Your Name]'}
+${mi.company||'[Company Name]'}
+📞 ${mi.phone||'[Phone]'}
+📧 ${mi.email||'[Email]'}${mi.website?'\n🌐 '+mi.website:''}`;
+}
+
+// ═══════════════════════════════════════════
+// OUTREACH RECORDS
+// ═══════════════════════════════════════════
+function newOutreachRecord(lead, buyer, subject, body) {
+  return {
+    id: 'O'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    leadId: lead.id, leadAddr: lead.addr,
+    buyerId: String(buyer.id), buyerName: buyer.name, buyerEmail: buyer.email||'',
+    subject, body,
+    sentAt: null, status: 'drafted',
+    followUpStatus: '', followUpDate: '', notes: '',
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function updateOutreachRecord(id, updates) {
+  const idx = outreach.findIndex(o => o.id === id);
+  if (idx >= 0) { outreach[idx] = { ...outreach[idx], ...updates }; persist(); renderOutreachTracker(); renderOutreachStats(); }
+}
+
+// ═══════════════════════════════════════════
+// READY TO SEND TOGGLE
+// ═══════════════════════════════════════════
+function toggleReadyToSend(id) {
+  const l = leads.find(x => String(x.id) === String(id));
+  if (!l) return;
+  l.readyToSend = !l.readyToSend;
+  persist(); renderPipeline();
+  toast(l.readyToSend ? '📤 Added to Outreach queue' : 'Removed from Outreach queue', l.readyToSend);
+  // Update outreach sidebar badge
+  const badge = document.getElementById('nb-ready');
+  if (badge) badge.textContent = leads.filter(x=>x.readyToSend).length;
+}
+
+function scrollToTracker() {
+  const el = document.getElementById('outreach-tracker-section');
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function showFollowUpsDue() {
+  document.getElementById('tracker-filter-fu').value = 'due';
+  renderOutreachTracker();
+  scrollToTracker();
+}
+
+// ═══════════════════════════════════════════
+// OUTREACH PAGE RENDER
+// ═══════════════════════════════════════════
+function renderOutreachPage() {
+  loadMyInfo();
+  renderOutreachStats();
+  renderReadyLots();
+  renderBuyerMatchPanel();
+  renderOutreachTracker();
+  const nb = document.getElementById('nb-ready');
+  if (nb) nb.textContent = leads.filter(l=>l.readyToSend).length;
+  const nbO = document.getElementById('nb-outreach');
+  if (nbO) nbO.textContent = outreach.length;
+  const nbFu = document.getElementById('nb-fudue');
+  if (nbFu) nbFu.textContent = outreach.filter(o=>o.followUpDate&&new Date(o.followUpDate)<=new Date()&&!o.followUpStatus).length;
+}
+
+function renderOutreachStats() {
+  const rl   = leads.filter(l => l.readyToSend);
+  const sent = outreach.filter(o => o.status==='sent').length;
+  const int_ = outreach.filter(o => o.followUpStatus==='interested').length;
+  const due  = outreach.filter(o => o.followUpDate && new Date(o.followUpDate)<=new Date() && !o.followUpStatus).length;
+  const el = document.getElementById('outreach-stats');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="stat hi"><div class="stat-lbl">Ready to Send</div><div class="stat-val gold">${rl.length}</div><div class="stat-sub">lots queued</div></div>
+    <div class="stat"><div class="stat-lbl">Emails Sent</div><div class="stat-val blue">${sent}</div><div class="stat-sub">total sent</div></div>
+    <div class="stat"><div class="stat-lbl">Interested</div><div class="stat-val green">${int_}</div><div class="stat-sub">buyers replied yes</div></div>
+    <div class="stat"><div class="stat-lbl">Follow-ups Due</div><div class="stat-val ${due>0?'red':'amber'}">${due}</div><div class="stat-sub">need action</div></div>
+    <div class="stat"><div class="stat-lbl">Total Records</div><div class="stat-val">${outreach.length}</div><div class="stat-sub">all time</div></div>`;
+}
+
+function renderReadyLots() {
+  const rl = leads.filter(l => l.readyToSend);
+  const el = document.getElementById('outreach-lots');
+  if (!el) return;
+  const hd = document.getElementById('nb-ready-hd');
+  if (hd) hd.textContent = rl.length + ' lot' + (rl.length===1?'':'s');
+  if (!rl.length) {
+    el.innerHTML = '<div style="padding:24px 14px;text-align:center;color:var(--text3);font-size:11px;line-height:1.7">No lots marked yet.<br>Go to <strong style="color:var(--gold)">Pipeline → click a lead → 📤 Mark Ready to Send</strong></div>';
+    return;
+  }
+  el.innerHTML = rl.map(l => {
+    const sent = outreach.filter(o => o.leadId===l.id && o.status==='sent').length;
+    return `<div class="ol-card${String(selOutreachLot)===String(l.id)?' sel':''}" onclick="selectOutreachLot('${l.id}')">
+      <div class="ol-addr">${l.addr}</div>
+      <div class="ol-meta">${[l.county,l.state,l.zip].filter(Boolean).join(' · ')}</div>
+      <div style="display:flex;gap:5px;margin-top:4px;align-items:center">
+        <span class="sc sc-${l.score}">${l.score}</span>
+        <span style="font-size:10px;color:var(--text3)">${l.price}</span>
+        ${sent?`<span style="font-size:10px;color:var(--blue);margin-left:auto">${sent} sent ✓</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectOutreachLot(id) {
+  selOutreachLot = String(id);
+  selOutreachBuyers = new Set();
+  renderReadyLots();
+  renderBuyerMatchPanel();
+}
+
+function renderBuyerMatchPanel() {
+  const panel = document.getElementById('outreach-compose');
+  if (!panel) return;
+  const lead = selOutreachLot ? leads.find(x => String(x.id)===String(selOutreachLot)) : null;
+  if (!lead) {
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">← Select a lot to see matched builders &amp; buyers</div>';
+    return;
+  }
+  const matched = matchBuyersForLot(lead);
+  const previewBuyer = matched.find(b => selOutreachBuyers.has(String(b.id))) || matched[0] || { name:'[Buyer Name]', contact:'[Buyer Name]', id:'preview' };
+
+  panel.innerHTML = `
+    <div class="compose-split">
+      <div class="buyers-col">
+        <div class="bcol-hd">Matched (${matched.length})
+          <span style="display:flex;gap:8px">
+            <span style="cursor:pointer;color:var(--gold);font-size:10px" onclick="selectAllBuyers()">All</span>
+            <span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="clearBuyers()">Clear</span>
+          </span>
+        </div>
+        ${!matched.length
+          ? '<div style="color:var(--text3);font-size:11px;padding:8px 0">No buyers matched for this location.<br><span style="font-size:10px">Try adding buyers in the Buyer CRM with matching state/county/zip.</span></div>'
+          : matched.map(b => {
+            const aClass = b.activity==='hot'?'ab-hot':b.activity==='active'?'ab-active':'ab-watch';
+            const aLabel = b.activity==='hot'?'Hot':b.activity==='active'?'Active':'Watch';
+            const mpClass = b.matchScore>=3?'mp-zip':b.matchScore>=2?'mp-county':'mp-state';
+            const mpLabel = b.matchScore>=3?'ZIP':b.matchScore>=2?'County':'State';
+            return `<label class="bm-row">
+              <input type="checkbox" ${selOutreachBuyers.has(String(b.id))?'checked':''} onchange="toggleBuyerSelect('${b.id}',this.checked)">
+              <div class="bm-info">
+                <div class="bm-name">${b.name}</div>
+                <div class="bm-sub"><span class="ab ${aClass}">${aLabel}</span><span class="match-pip ${mpClass}">${mpLabel}</span>${b.email?'':' <span style="color:var(--red);font-size:9px">No email</span>'}</div>
+              </div>
+            </label>`;
+          }).join('')}
+      </div>
+      <div class="email-col">
+        <div class="bcol-hd">Email preview <span id="sel-count" style="font-weight:400;color:var(--text3)">${selOutreachBuyers.size} selected</span></div>
+        <input class="email-subj-inp" id="email-subject-inp" value="${escHtml(generateEmailSubject(lead))}" placeholder="Subject…">
+        <textarea class="email-body-inp" id="email-body-inp">${escHtml(generateEmailBody(lead, previewBuyer))}</textarea>
+        <div style="font-size:10px;color:var(--text3)">Body auto-personalises with each buyer's name when sending.</div>
+      </div>
+    </div>
+    <div class="compose-foot">
+      <span id="compose-sel-label" style="font-size:11px;color:var(--text3);flex:1">${selOutreachBuyers.size} buyer${selOutreachBuyers.size===1?'':'s'} selected</span>
+      <button class="btn btn-sm" onclick="copyEmailPreview()">📋 Copy</button>
+      <button class="btn btn-sm btn-gold" id="send-btn" onclick="openSendModal('${lead.id}')">📧 Send to ${selOutreachBuyers.size||'…'}</button>
+    </div>`;
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function selectAllBuyers() {
+  const lead = leads.find(x=>String(x.id)===String(selOutreachLot));
+  if (!lead) return;
+  matchBuyersForLot(lead).forEach(b => selOutreachBuyers.add(String(b.id)));
+  renderBuyerMatchPanel();
+}
+function clearBuyers() { selOutreachBuyers = new Set(); renderBuyerMatchPanel(); }
+function toggleBuyerSelect(id, checked) {
+  checked ? selOutreachBuyers.add(String(id)) : selOutreachBuyers.delete(String(id));
+  const lbl = document.getElementById('compose-sel-label');
+  const btn = document.getElementById('send-btn');
+  const cnt = document.getElementById('sel-count');
+  const n = selOutreachBuyers.size;
+  if (lbl) lbl.textContent = n + ' buyer'+(n===1?'':'s')+' selected';
+  if (btn) btn.textContent = '📧 Send to '+(n||'…');
+  if (cnt) cnt.textContent = n+' selected';
+}
+function copyEmailPreview() {
+  const s = document.getElementById('email-subject-inp')?.value||'';
+  const b = document.getElementById('email-body-inp')?.value||'';
+  navigator.clipboard.writeText('Subject: '+s+'\n\n'+b)
+    .then(()=>toast('Email copied to clipboard',true))
+    .catch(()=>toast('Copy failed'));
+}
+
+// ═══════════════════════════════════════════
+// SEND PREVIEW MODAL
+// ═══════════════════════════════════════════
+function openSendModal(leadId) {
+  if (!selOutreachBuyers.size) { toast('Select at least one buyer first'); return; }
+  const lead = leads.find(x=>String(x.id)===String(leadId));
+  if (!lead) return;
+  const subject = document.getElementById('email-subject-inp')?.value || generateEmailSubject(lead);
+  const selBuyerObjs = buyers.filter(b => selOutreachBuyers.has(String(b.id)));
+
+  document.getElementById('send-modal-lead').textContent = lead.addr + ' · ' + selBuyerObjs.length + ' recipient' + (selBuyerObjs.length===1?'':'s');
+  document.getElementById('send-modal-body').innerHTML = selBuyerObjs.map(b => {
+    const body = generateEmailBody(lead, b);
+    const mailto = 'mailto:'+encodeURIComponent(b.email||'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    return `<div class="send-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:600">${b.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${b.email||'<span style="color:var(--red)">No email on file — edit buyer to add</span>'}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          ${b.email
+            ? `<a href="${mailto}" class="btn btn-sm btn-gold" onclick="recordSent('${lead.id}','${b.id}','${escHtml(subject)}')" style="text-decoration:none">📧 Open in Mail</a>`
+            : '<span style="font-size:11px;color:var(--text3)">No email</span>'}
+          <button class="btn btn-sm" onclick="copyBuyerEmail('${lead.id}','${b.id}','${escHtml(subject)}')">📋 Copy</button>
+        </div>
+      </div>
+      <pre>${escHtml(body.slice(0,400))}${body.length>400?'\n…(truncated)':''}</pre>
+    </div>`;
+  }).join('');
+  document.getElementById('send-modal').classList.add('open');
+}
+function closeSendModal() { document.getElementById('send-modal').classList.remove('open'); }
+
+function recordSent(leadId, buyerId, subject) {
+  const lead   = leads.find(x=>String(x.id)===String(leadId));
+  const buyer  = buyers.find(b=>String(b.id)===String(buyerId));
+  if (!lead||!buyer) return;
+  if (outreach.find(o=>o.leadId===leadId&&o.buyerId===String(buyerId)&&o.status==='sent')) return;
+  const body = generateEmailBody(lead, buyer);
+  const rec  = newOutreachRecord(lead, buyer, subject, body);
+  rec.status = 'sent'; rec.sentAt = new Date().toISOString();
+  outreach.push(rec);
+  persist(); renderOutreachStats(); renderOutreachTracker();
+  toast('Logged as sent → '+buyer.name, true);
+}
+
+function copyBuyerEmail(leadId, buyerId, subject) {
+  const lead  = leads.find(x=>String(x.id)===String(leadId));
+  const buyer = buyers.find(b=>String(b.id)===String(buyerId));
+  if (!lead||!buyer) return;
+  const body = generateEmailBody(lead, buyer);
+  navigator.clipboard.writeText('To: '+(buyer.email||'')+'\nSubject: '+subject+'\n\n'+body)
+    .then(()=>toast('Copied: '+buyer.name, true))
+    .catch(()=>toast('Copy failed'));
+}
+
+// ═══════════════════════════════════════════
+// OUTREACH TRACKER
+// ═══════════════════════════════════════════
+function renderOutreachTracker() {
+  const tbody = document.getElementById('outreach-tbody');
+  if (!tbody) return;
+  const fStatus = (document.getElementById('tracker-filter-status')||{value:''}).value;
+  const fFu     = (document.getElementById('tracker-filter-fu')||{value:''}).value;
+  const now = new Date();
+  let data = [...outreach].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  if (fStatus) data = data.filter(o=>o.status===fStatus);
+  if (fFu==='due') data = data.filter(o=>o.followUpDate&&new Date(o.followUpDate)<=now&&!o.followUpStatus);
+  else if (fFu) data = data.filter(o=>o.followUpStatus===fFu);
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:22px;color:var(--text3)">No records match filters. Send some emails to start tracking.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(o => {
+    const sentDate = o.sentAt ? new Date(o.sentAt).toLocaleDateString() : '—';
+    const fuOvd    = o.followUpDate && new Date(o.followUpDate)<=now && !o.followUpStatus;
+    return `<tr>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${o.leadAddr}">${o.leadAddr}</td>
+      <td style="font-size:11px;font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.buyerName}</td>
+      <td style="font-size:11px;color:var(--text3);white-space:nowrap">${sentDate}</td>
+      <td><span class="os ${o.status==='sent'?'os-sent':'os-draft'}">${o.status==='sent'?'Sent':'Draft'}</span></td>
+      <td>
+        <select onchange="updateOutreachRecord('${o.id}',{followUpStatus:this.value})" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:4px;color:var(--text);padding:2px 5px;font-size:10px;font-family:inherit;min-width:100px">
+          <option value="" ${!o.followUpStatus?'selected':''}>Pending</option>
+          <option value="interested" ${o.followUpStatus==='interested'?'selected':''}>Interested</option>
+          <option value="not_interested" ${o.followUpStatus==='not_interested'?'selected':''}>Not Interested</option>
+          <option value="no_response" ${o.followUpStatus==='no_response'?'selected':''}>No Response</option>
+        </select>
+      </td>
+      <td>
+        <input type="date" value="${o.followUpDate||''}" onchange="updateOutreachRecord('${o.id}',{followUpDate:this.value})"
+          style="background:var(--bg3);border:0.5px solid ${fuOvd?'var(--red)':'var(--border2)'};border-radius:3px;color:${fuOvd?'var(--red)':'var(--text)'};font-size:10px;padding:2px 4px;font-family:inherit">
+      </td>
+      <td>
+        <input type="text" value="${(o.notes||'').replace(/"/g,'&quot;')}" placeholder="Notes…"
+          onchange="updateOutreachRecord('${o.id}',{notes:this.value})"
+          style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:3px;color:var(--text);font-size:10px;padding:2px 6px;width:100%;font-family:inherit;min-width:120px">
+      </td>
+      <td>
+        <button class="btn btn-sm btn-red" onclick="deleteOutreach('${o.id}')" style="padding:2px 6px;font-size:10px">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  // Update sidebar badges
+  const nbO  = document.getElementById('nb-outreach'); if(nbO) nbO.textContent=outreach.length;
+  const nbFu = document.getElementById('nb-fudue');    if(nbFu) nbFu.textContent=outreach.filter(o=>o.followUpDate&&new Date(o.followUpDate)<=new Date()&&!o.followUpStatus).length;
+}
+
+function deleteOutreach(id) {
+  if (!confirm('Remove this outreach record?')) return;
+  outreach = outreach.filter(o=>o.id!==id);
+  persist(); renderOutreachStats(); renderOutreachTracker();
+}
+
+function exportOutreachCSV() {
+  const rows = [['Lot address','Buyer','Buyer email','Date sent','Status','Follow-up','Follow-up date','Notes']];
+  outreach.forEach(o=>rows.push([o.leadAddr,o.buyerName,o.buyerEmail,o.sentAt?new Date(o.sentAt).toLocaleDateString():'',o.status,o.followUpStatus,o.followUpDate,o.notes]));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'));
+  a.download='fuchsmonte_outreach_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); toast('Outreach tracker exported',true);
+}
+
+// ═══════════════════════════════════════════
+// MY INFO MODAL
+// ═══════════════════════════════════════════
+function openMyInfoModal() {
+  loadMyInfo();
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
+  s('mi-name',myInfo.name); s('mi-company',myInfo.company);
+  s('mi-phone',myInfo.phone); s('mi-email',myInfo.email); s('mi-website',myInfo.website);
+  document.getElementById('myinfo-modal').classList.add('open');
+}
+function closeMyInfoModal() { document.getElementById('myinfo-modal').classList.remove('open'); }
+function saveMyInfo() {
+  myInfo = {
+    name:    document.getElementById('mi-name')?.value||'',
+    company: document.getElementById('mi-company')?.value||'',
+    phone:   document.getElementById('mi-phone')?.value||'',
+    email:   document.getElementById('mi-email')?.value||'',
+    website: document.getElementById('mi-website')?.value||'',
+  };
+  saveMyInfoToStorage(); closeMyInfoModal();
+  toast('Contact info saved — emails will use your signature',true);
+  if (selOutreachLot) renderBuyerMatchPanel();
+}
 
 // ═══════════════════════════════════════════
 // INIT
