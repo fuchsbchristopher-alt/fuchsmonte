@@ -100,9 +100,9 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,s
 .fi{background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:5px 9px;font-size:12px;font-family:inherit}
 .fi-wide{min-width:180px}
 
-/* KANBAN */
-.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.lane{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:10px;min-height:200px}
+/* ═══ FIX 4: Kanban now 6 columns (Dead lane added) ═══ */
+.kanban{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.lane{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:9px;min-height:200px}
 .lane-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .lane-name{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em}
 .lct{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600}
@@ -112,7 +112,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,s
 .lct-Contract{background:var(--green-bg);color:var(--green)}
 .lct-Closed{background:rgba(201,168,76,0.15);color:var(--gold)}
 .lct-Dead{background:rgba(255,255,255,0.04);color:var(--text3)}
-.kcard{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--rs);padding:9px;margin-bottom:7px;cursor:pointer;transition:border-color .12s,background .12s}
+.kcard{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--rs);padding:8px;margin-bottom:7px;cursor:pointer;transition:border-color .12s,background .12s}
 .kcard:hover{border-color:var(--border2);background:var(--bg4)}
 .kcard.sel{border-color:var(--gold);background:var(--gold-dim);border-width:1.5px;box-shadow:0 0 0 2px rgba(201,168,76,0.15)}
 .kc-addr{font-size:11px;font-weight:600;color:var(--text);line-height:1.35;margin-bottom:2px}
@@ -130,10 +130,12 @@ html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,s
 .lane-empty{font-size:11px;color:var(--text3);text-align:center;padding:16px 0}
 
 /* TABLE */
+/* ═══ FIX 8: Sort arrow styles ═══ */
 .tbl-wrap{border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:8px 10px;font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg3);border-bottom:0.5px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th{text-align:left;padding:8px 10px;font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg3);border-bottom:0.5px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .1s}
 th:hover{color:var(--text)}
+th.sort-active{color:var(--gold)}
 td{padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr.dr:hover td{background:var(--bg3);cursor:pointer}
@@ -332,22 +334,9 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
         <div id="kanban-view"><div class="kanban" id="kanban-board"></div></div>
         <div id="table-view" style="display:none">
           <div class="tbl-wrap">
+            <!-- ═══ FIX 8: thead is now generated dynamically with sort arrows ═══ -->
             <table>
-              <thead><tr>
-                <th onclick="sortBy('addr')">Address</th>
-                <th onclick="sortBy('owner')">Owner</th>
-                <th onclick="sortBy('phone')">Phone</th>
-                <th onclick="sortBy('state')">State</th>
-                <th onclick="sortBy('county')">County</th>
-                <th onclick="sortBy('zip')">Zip</th>
-                <th onclick="sortBy('lotSf')">Lot sf</th>
-                <th onclick="sortBy('estValue')">Est. Value</th>
-                <th onclick="sortBy('offerAmt')">Offer</th>
-                <th onclick="sortBy('equity')">Equity</th>
-                <th onclick="sortBy('stage')">Stage</th>
-                <th onclick="sortBy('score')">Score</th>
-                <th>Actions</th>
-              </tr></thead>
+              <thead id="tbl-head"></thead>
               <tbody id="tbl-body"></tbody>
             </table>
           </div>
@@ -397,8 +386,8 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       <div class="fgrp"><label>County</label><input type="text" id="f-county" placeholder="Lee County"></div>
       <div class="fgrp"><label>Zip</label><input type="text" id="f-zip"></div>
       <div class="fgrp"><label>Lot size (sf)</label><input type="text" id="f-lot"></div>
-      <div class="fgrp"><label>Est. value ($)</label><input type="text" id="f-val"></div>
-      <div class="fgrp"><label>Our offer ($)</label><input type="text" id="f-offer"></div>
+      <div class="fgrp"><label>Est. value ($)</label><input type="text" id="f-val" placeholder="100000"></div>
+      <div class="fgrp"><label>Our offer ($) — blank = auto 55%</label><input type="text" id="f-offer" placeholder="Auto-calculated"></div>
       <div class="fgrp"><label>Stage</label>
         <select id="f-stage"><option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option></select>
       </div>
@@ -459,6 +448,7 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
 <script>
 const SUPABASE_URL = 'https://wsezvjbsxzyunqebkrng.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hFrsbBRvankorzlt0Jc_8w_c63-B6pV';
+
 // ═══════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════
@@ -467,30 +457,61 @@ const STATES = {
   CA:{name:'California',flag:'☀️'},AZ:{name:'Arizona',flag:'🌵'},
   SC:{name:'South Carolina',flag:'🌙'},NC:{name:'North Carolina',flag:'🏔️'}
 };
-const QUAL_LABELS = ['Zone X','Zoning','No species','No main rd','Canal ok','Zip ok'];
-const MAIN_ROADS  = ['pine island','santa barbara','gleason','del prado','cape coral pkwy','coronado','veterans','burnt store','nicholas'];
+const QUAL_LABELS  = ['Zone X','Zoning','No species','No main rd','Canal ok','Zip ok'];
+const MAIN_ROADS   = ['pine island','santa barbara','gleason','del prado','cape coral pkwy','coronado','veterans','burnt store','nicholas'];
+
+// ═══ FIX 8: Table column definitions for dynamic header rendering ═══
+const TABLE_COLS = [
+  {key:'addr',    label:'Address'},
+  {key:'owner',   label:'Owner'},
+  {key:'phone',   label:'Phone'},
+  {key:'state',   label:'State'},
+  {key:'county',  label:'County'},
+  {key:'zip',     label:'Zip'},
+  {key:'lotSf',   label:'Lot sf'},
+  {key:'estValue',label:'Est. Value'},
+  {key:'offerAmt',label:'Offer'},
+  {key:'equity',  label:'Equity'},
+  {key:'stage',   label:'Stage'},
+  {key:'score',   label:'Score'},
+];
 
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
-let leads=[], buyers=[], selId=null, editLId=null, editBId=null, nid=1000, sortCol=null, sortDir=1;
+let leads=[], buyers=[], selId=null, editLId=null, editBId=null, sortCol=null, sortDir=1;
 let pipeState='', pipeCounty='', buyerState='', buyerCounty='';
 let currentPage = 'pipeline';
 
 // ═══════════════════════════════════════════
+// ═══ FIX 1: Buyer ID — use timestamp-based IDs, never reset ═══
+// ═══════════════════════════════════════════
+function newBuyerId() {
+  return 'B' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+// ═══════════════════════════════════════════
+// ═══ FIX 2: Buyer merge — deduplicate by ID, manual version wins ═══
+// Editing a built-in BUYER_DB buyer sets manual:true and saves it with the
+// same ID. On reload, mergeBuyers overwrites the DB entry with the saved
+// version instead of creating a duplicate.
+// ═══════════════════════════════════════════
+function mergeBuyers(dbBuyers, manualBuyers) {
+  const map = new Map();
+  dbBuyers.forEach(b => map.set(String(b.id), b));
+  manualBuyers.forEach(b => map.set(String(b.id), b)); // saved version wins
+  return Array.from(map.values());
+}
+
+// ═══════════════════════════════════════════
 // PERSIST / HYDRATE
 // ═══════════════════════════════════════════
-// ── CLOUD STORAGE (window.storage) ──
-// Saves to Claude's persistent storage — works from any device, any browser.
-// Falls back to localStorage if window.storage unavailable.
-
 async function persist() {
   const data = {
     leads: leads,
     buyers_manual: buyers.filter(b => b.manual),
     savedAt: new Date().toISOString(),
   };
-  // Save to Supabase
   try {
     await fetch(SUPABASE_URL + '/rest/v1/fm_data', {
       method: 'POST',
@@ -503,15 +524,14 @@ async function persist() {
       body: JSON.stringify({ id: 'main', leads: data.leads, buyers_manual: data.buyers_manual, updated_at: new Date().toISOString() })
     });
   } catch(e) { console.error('Supabase save error:', e); }
-  // Also save locally as backup
   try { localStorage.setItem('fm_backup', JSON.stringify(data)); } catch(e) {}
   const el = document.getElementById('sync-info');
   if (el) el.textContent = leads.length + ' leads · saved ' + new Date().toLocaleTimeString();
 }
+// ═══ FIX 7: removed _origPersist double-wrap that was here ═══
 
 async function hydrate() {
   let data = null;
-  // Try Supabase first
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/fm_data?id=eq.main&select=*', {
       headers: {
@@ -523,24 +543,27 @@ async function hydrate() {
     const rows = await r.json();
     if (rows && rows[0] && rows[0].leads) data = rows[0];
   } catch(e) { console.error('Supabase load error:', e); }
-  // Fallback to localStorage backup
+
   if (!data) {
     try {
       const raw = localStorage.getItem('fm_backup') || localStorage.getItem('fuchsmonte_data') || localStorage.getItem('fm_leads');
       if (raw) { const p = JSON.parse(raw); data = Array.isArray(p) ? { leads: p, buyers_manual: [] } : p; }
     } catch(e) {}
   }
+
   if (data && data.leads) {
     leads = (data.leads || []).map(normL);
     const manual = data.buyers_manual || [];
-    buyers = [...BUYER_DB, ...manual];
-    const savedAt = data.savedAt || data.updated_at;
-    console.log('[Fuchsmonte] Loaded', leads.length, 'leads from', data.leads ? 'Supabase' : 'localStorage');
+    // ═══ FIX 2 applied here ═══
+    buyers = mergeBuyers(BUYER_DB, manual);
+    // ═══ FIX 6: removed unused `savedAt` variable ═══
+    console.log('[Fuchsmonte] Loaded', leads.length, 'leads');
   } else {
     leads = [];
     buyers = [...BUYER_DB];
   }
 }
+
 // ═══════════════════════════════════════════
 // PROPSTREAM COLUMN MAPPING
 // ═══════════════════════════════════════════
@@ -551,7 +574,7 @@ function g(row, keys) {
   }
   return '';
 }
-function pn(v) { return parseFloat(String(v||'').replace(/[$,%,]/g,'').replace(/,/g,''))||0; }
+function pn(v) { return parseFloat(String(v||'').replace(/[$,%]/g,'').replace(/,/g,''))||0; }
 
 function mapRow(row) {
   const fn    = g(row,['Owner 1 First Name','First Name','firstname']);
@@ -598,7 +621,6 @@ function mapRow(row) {
 }
 
 function normL(l) {
-  // Preserve existing ID — never regenerate. Regenerating caused selId to point to wrong lead.
   const stableId = (l && l.id != null) ? l.id : ('L' + Date.now() + '_' + Math.random().toString(36).slice(2,7));
   return {
     addr:'',rawAddr:'',city:'',state:'FL',county:'',zip:'',apn:'',
@@ -616,7 +638,7 @@ function normL(l) {
 // FILE IMPORT
 // ═══════════════════════════════════════════
 function handleFile(input) { const f=input.files[0]; if(f){processFile(f);} input.value=''; }
-function handleDrop(e) { const f=e.dataTransfer.files[0]; if(f) processFile(f); }
+function handleDrop(e)     { const f=e.dataTransfer.files[0]; if(f) processFile(f); }
 
 function processFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
@@ -636,147 +658,113 @@ function processFile(file) {
   } else toast('Use .csv or .xlsx files');
 }
 
-
 // ═══════════════════════════════════════════
 // FLOOD ZONE CHECK — FEMA National Flood Hazard Layer API
-// Free, no key needed, works for all US addresses
 // ═══════════════════════════════════════════
 async function checkFloodZone(lat, lng) {
   try {
     const url = `https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FLD_ZONE,ZONE_SUBTY&returnGeometry=false&f=json`;
-    const r = await fetch(url);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     if (data.features && data.features.length > 0) {
-      const zone = data.features[0].attributes.FLD_ZONE || 'Unknown';
-      return zone;
+      return data.features[0].attributes.FLD_ZONE || 'Unknown';
     }
-    return 'X'; // Default to X if no data found
+    return 'X';
   } catch(e) {
-    console.warn('Flood zone check failed:', e);
-    return null; // null means unknown
+    console.warn('Flood zone check failed:', e.name === 'AbortError' ? 'Timeout' : e.message);
+    return null;
   }
 }
 
 // ═══════════════════════════════════════════
-// PROTECTED SPECIES CHECK — USFWS Critical Habitat API
-// Free public API from US Fish & Wildlife Service
+// ═══ FIX 9: Protected species check — added timeout + proper error handling ═══
 // ═══════════════════════════════════════════
 async function checkProtectedSpecies(lat, lng) {
   try {
-    // Check USFWS Critical Habitat layer
     const url = `https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/USFWS_Critical_Habitat/FeatureServer/1/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=comname,sciname&returnGeometry=false&f=json`;
-    const r = await fetch(url);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { mode: 'cors', signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
     if (data.features && data.features.length > 0) {
       const species = data.features.map(f => f.attributes.comname).filter(Boolean);
-      return { hasSpecies: true, species: species };
+      return { hasSpecies: true, species };
     }
     return { hasSpecies: false, species: [] };
   } catch(e) {
-    console.warn('Species check failed:', e);
-    return null; // null means unknown
+    const reason = e.name === 'AbortError' ? 'Timeout' : e.message;
+    console.warn('Species check failed:', reason);
+    return null; // null = unknown, keeps existing q[2] value
   }
 }
 
 // ═══════════════════════════════════════════
 // GEOCODE ADDRESS — Census Geocoder (free, no key)
-// Converts address to lat/lng for API calls
 // ═══════════════════════════════════════════
 async function geocodeAddress(address) {
   try {
     const encoded = encodeURIComponent(address);
     const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encoded}&benchmark=Public_AR_Current&format=json`;
-    const r = await fetch(url);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
     const data = await r.json();
-    if (data.result && data.result.addressMatches && data.result.addressMatches.length > 0) {
+    if (data.result?.addressMatches?.length > 0) {
       const coords = data.result.addressMatches[0].coordinates;
       return { lat: coords.y, lng: coords.x };
     }
     return null;
   } catch(e) {
-    console.warn('Geocoding failed:', e);
+    console.warn('Geocoding failed:', e.name === 'AbortError' ? 'Timeout' : e.message);
     return null;
   }
 }
 
 // ═══════════════════════════════════════════
 // FULL LEAD QUALIFIER
-// Runs flood zone + species check on a single lead
-// Updates the lead's q array and score in place
 // ═══════════════════════════════════════════
 async function runApiChecks(lead) {
-  // Show checking indicator
-  const checkingMsg = `Checking ${lead.addr}...`;
-  console.log('[API Check]', checkingMsg);
-
-  // Geocode the address
   const coords = await geocodeAddress(lead.addr);
   if (!coords) {
     console.warn('[API Check] Could not geocode:', lead.addr);
-    return lead; // Return unchanged if geocoding fails
+    return lead;
   }
-
   const { lat, lng } = coords;
-  const results = { floodZone: null, species: null };
-
-  // Run both checks in parallel
   const [floodZone, speciesResult] = await Promise.all([
     checkFloodZone(lat, lng),
     checkProtectedSpecies(lat, lng)
   ]);
-
-  results.floodZone = floodZone;
-  results.species = speciesResult;
-
-  // Update qualification array
-  // q = [Zone X, Zoning, No species, No main rd, Canal ok, Zip ok]
   const newQ = [...(lead.q || [1,1,1,1,1,1])];
-
-  // Index 0 = Flood Zone X
-  if (floodZone !== null) {
-    newQ[0] = (floodZone === 'X' || floodZone === 'X500') ? 1 : 0;
-  }
-
-  // Index 2 = No protected species
-  if (speciesResult !== null) {
-    newQ[2] = speciesResult.hasSpecies ? 0 : 1;
-  }
-
-  // Recalculate score
+  if (floodZone !== null) newQ[0] = (floodZone === 'X' || floodZone === 'X500') ? 1 : 0;
+  if (speciesResult !== null) newQ[2] = speciesResult.hasSpecies ? 0 : 1;
   const qSum = newQ.reduce((a,b) => a+b, 0);
   const score = qSum === 6 ? 'A' : qSum >= 4 ? 'B' : 'C';
-
-  // Build flags
   const flags = [...(lead.flags || [])].filter(f => !f.includes('Flood') && !f.includes('species'));
-  if (floodZone && floodZone !== 'X' && floodZone !== 'X500') {
-    flags.push(`Flood Zone ${floodZone} — not Zone X`);
-  }
-  if (speciesResult && speciesResult.hasSpecies) {
-    flags.push(`Protected species: ${speciesResult.species.slice(0,2).join(', ')}`);
-  }
-
-  return {
-    ...lead,
-    q: newQ,
-    score: score,
-    flags: flags,
-    floodZone: floodZone,
-    speciesChecked: true,
-    apiCheckedAt: new Date().toISOString(),
-  };
+  if (floodZone && floodZone !== 'X' && floodZone !== 'X500') flags.push(`Flood Zone ${floodZone} — not Zone X`);
+  if (speciesResult?.hasSpecies) flags.push(`Protected species: ${speciesResult.species.slice(0,2).join(', ')}`);
+  return { ...lead, q: newQ, score, flags, floodZone, speciesChecked: true, apiCheckedAt: new Date().toISOString() };
 }
 
 // ═══════════════════════════════════════════
-// BATCH CHECK ALL UNCHECKED LEADS
-// Runs API checks on leads that haven't been
-// verified yet (runs in background after import)
+// ═══ FIX 3: Batch API checks — uses import-msg for progress (agent-msg doesn't exist) ═══
 // ═══════════════════════════════════════════
 async function runBatchApiChecks() {
   const unchecked = leads.filter(l => !l.speciesChecked && !l.apiCheckedAt);
   if (unchecked.length === 0) return;
 
-  const bar = document.getElementById('agent-msg');
-  if (bar) bar.textContent = `Checking flood zones & protected species for ${unchecked.length} leads...`;
+  const importMsg = document.getElementById('import-msg');
+  const origMsg   = importMsg ? importMsg.innerHTML : '';
+  const setProgress = msg => { if (importMsg) importMsg.innerHTML = msg; };
+
+  setProgress(`Verifying flood zones &amp; species for <strong>${unchecked.length} leads</strong>… <span style="color:var(--text3)">(runs in background)</span>`);
 
   let checked = 0;
   for (const lead of unchecked) {
@@ -785,29 +773,37 @@ async function runBatchApiChecks() {
       const idx = leads.findIndex(l => l.id === lead.id);
       if (idx >= 0) leads[idx] = updated;
       checked++;
-
-      // Update progress
       const pct = Math.round((checked / unchecked.length) * 100);
-      if (bar) bar.textContent = `Checking flood zones & species... ${checked}/${unchecked.length} (${pct}%)`;
-
-      // Render every 5 leads to show progress
-      if (checked % 5 === 0) {
-        renderPipeline();
-        await persist();
-      }
-
-      // Small delay to avoid rate limiting
+      setProgress(`Checking flood zones &amp; species… <strong>${checked}/${unchecked.length}</strong> (${pct}%)`);
+      if (checked % 5 === 0) { renderPipeline(); await persist(); }
       await new Promise(r => setTimeout(r, 200));
     } catch(e) {
       console.warn('API check failed for', lead.addr, e);
     }
   }
-
-  // Final save and render
   await persist();
   renderPipeline();
-  if (bar) bar.textContent = `✓ Flood zone & species checks complete for ${checked} leads`;
+  setProgress(origMsg + ` · <strong style="color:var(--green)">✓ ${checked} verified</strong>`);
   toast(checked + ' leads verified — flood zone & species updated', true);
+}
+
+// ═══════════════════════════════════════════
+// ═══ FIX 5: recheckLead() — replaces fragile inline JS in detail panel ═══
+// ═══════════════════════════════════════════
+function recheckLead(id) {
+  const lead = leads.find(x => String(x.id) === String(id));
+  if (!lead) return;
+  toast('Running flood zone & species check…');
+  runApiChecks(lead)
+    .then(updated => {
+      const idx = leads.findIndex(x => String(x.id) === String(id));
+      if (idx >= 0) { leads[idx] = updated; persist(); renderPipeline(); }
+      toast('Flood zone & species updated', true);
+    })
+    .catch(e => {
+      console.warn('Re-check failed:', e);
+      toast('Re-check failed — check console');
+    });
 }
 
 function importRows(rows, fileName) {
@@ -829,8 +825,7 @@ function importRows(rows, fileName) {
     `<strong>${added} leads imported</strong> from ${fileName} · ${skipped} duplicates skipped · <strong style="color:var(--green)">${qA} qualify (A score)</strong>`;
   document.getElementById('sync-info').textContent=leads.length+' leads';
   renderPipeline(); buildTerNav();
-  toast(added+' leads imported — '+qA+' qualified. Checking flood zones & species...',true);
-  // Run API checks in background after import
+  toast(added+' leads imported — '+qA+' qualified',true);
   setTimeout(() => runBatchApiChecks(), 1000);
 }
 
@@ -857,10 +852,14 @@ function filteredLeads() {
   }
   return data;
 }
-function sortBy(col){sortCol===col?sortDir*=-1:(sortCol=col,sortDir=1);renderPipeline();}
+
+function sortBy(col){
+  sortCol===col ? sortDir*=-1 : (sortCol=col, sortDir=1);
+  renderPipeline();
+}
 
 // ═══════════════════════════════════════════
-// TERRITORY NAV (pipeline)
+// TERRITORY NAV
 // ═══════════════════════════════════════════
 function buildTerNav() {
   const states=[...new Set(leads.map(l=>l.state))].filter(Boolean).sort();
@@ -897,7 +896,7 @@ function setPipeFilter(state,county,el) {
 // ═══════════════════════════════════════════
 function renderPipeStats() {
   const all=leads, filt=filteredLeads();
-  const val=all.filter(l=>l.offer&&l.stage!=='Dead').reduce((a,l)=>a+(parseInt((l.offer||'').replace(/\D/g,''))||0),0);
+  const val=all.filter(l=>l.offerAmt&&l.stage!=='Dead').reduce((a,l)=>a+(l.offerAmt||0),0);
   document.getElementById('pipe-stats').innerHTML=`
     <div class="stat"><div class="stat-lbl">Total leads</div><div class="stat-val">${all.length}</div><div class="stat-sub">${filt.length} in view</div></div>
     <div class="stat hi"><div class="stat-lbl">Qualified (A)</div><div class="stat-val gold">${all.filter(l=>l.score==='A').length}</div><div class="stat-sub">contact first</div></div>
@@ -907,12 +906,12 @@ function renderPipeStats() {
 }
 
 // ═══════════════════════════════════════════
-// KANBAN
+// ═══ FIX 4: Kanban now includes Dead column ═══
 // ═══════════════════════════════════════════
 function renderKanban() {
   const data=filteredLeads();
-  const STAGES=['New','Contacted','Offer Sent','Under Contract','Closed'];
-  const LC={New:'New',Contacted:'Contacted','Offer Sent':'Offer','Under Contract':'Contract',Closed:'Closed'};
+  const STAGES=['New','Contacted','Offer Sent','Under Contract','Closed','Dead'];
+  const LC={New:'New',Contacted:'Contacted','Offer Sent':'Offer','Under Contract':'Contract',Closed:'Closed',Dead:'Dead'};
   document.getElementById('kanban-board').innerHTML=STAGES.map(st=>{
     const cards=data.filter(l=>l.stage===st);
     return `<div class="lane">
@@ -930,9 +929,21 @@ function renderKanban() {
 }
 
 // ═══════════════════════════════════════════
-// TABLE
+// ═══ FIX 8: Table with dynamic sortable headers + sort arrows ═══
 // ═══════════════════════════════════════════
+function renderTableHead() {
+  const head = document.getElementById('tbl-head');
+  if (!head) return;
+  const arrow = col => sortCol === col ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+  head.innerHTML = '<tr>' +
+    TABLE_COLS.map(c =>
+      `<th onclick="sortBy('${c.key}')" class="${sortCol===c.key?'sort-active':''}">${c.label}${arrow(c.key)}</th>`
+    ).join('') +
+    '<th>Actions</th></tr>';
+}
+
 function renderTable() {
+  renderTableHead();
   const data=filteredLeads();
   const tbody=document.getElementById('tbl-body');
   if(!data.length){tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:22px;color:var(--text3)">No leads match filters</td></tr>';return;}
@@ -965,10 +976,11 @@ function renderTable() {
 function renderDetail() {
   const wrap=document.getElementById('detail-wrap');
   if(!selId){wrap.innerHTML='';return;}
-  const l=leads.find(x=>String(x.id)===String(selId));  // stable string comparison
+  const l=leads.find(x=>String(x.id)===String(selId));
   if(!l){wrap.innerHTML='';return;}
   const phones=(l.allPhones&&l.allPhones.length?l.allPhones:l.phone?[l.phone]:[]).filter(Boolean)
     .map((p,i)=>`<div style="font-size:12px">${p}${i===0?' <span style="font-size:10px;color:var(--text3)">primary</span>':''}</div>`).join('')||'—';
+  // ═══ FIX 5: recheckLead('id') replaces the inline runApiChecks(...).then(...) mess ═══
   wrap.innerHTML=`<div class="detail">
     <div class="dp-hd">
       <div>
@@ -1008,7 +1020,7 @@ function renderDetail() {
         <option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option>
       </select>
       <button class="btn btn-sm btn-red" onclick="delLead('${l.id}')">Remove</button>
-      <button class="btn btn-sm btn-green" onclick="runApiChecks(leads.find(x=>String(x.id)===String('${l.id}'))).then(updated=>{const idx=leads.findIndex(x=>String(x.id)===String('${l.id}'));if(idx>=0){leads[idx]=updated;persist();renderPipeline();}toast('Flood zone & species updated',true);})" style="font-size:11px">&#9679; Re-check</button>
+      <button class="btn btn-sm btn-green" onclick="recheckLead('${l.id}')" style="font-size:11px">&#9679; Re-check</button>
     </div>
   </div>`;
 }
@@ -1028,7 +1040,6 @@ function renderPipeline() {
 function selLead(id){
   selId = String(selId)===String(id) ? null : String(id);
   renderPipeline();
-  // Scroll detail panel into view so user sees the correct info immediately
   if(selId){
     requestAnimationFrame(()=>{
       const el=document.getElementById('detail-wrap');
@@ -1056,7 +1067,7 @@ function saveNotes(id){
 function delLead(id){
   if(!confirm('Remove this lead?'))return;
   leads=leads.filter(x=>String(x.id)!==String(id));
-  if(String(selId)===String(id))selId=null;  // clear selection if deleted
+  if(String(selId)===String(id))selId=null;
   persist();toast('Lead removed');renderPipeline();buildTerNav();
 }
 async function clearLeads(){
@@ -1085,33 +1096,49 @@ function openLeadModal(id){
   const set=(fid,val)=>{const e=document.getElementById(fid);if(e)e.value=val||'';};
   set('f-addr',l?.addr);set('f-owner',l?.owner);set('f-phone',l?.phone);set('f-email',l?.email);
   set('f-state',l?.state||'FL');set('f-county',l?.county);set('f-zip',l?.zip);
-  set('f-lot',l?.lot);set('f-val',l?.price);set('f-offer',l?.offer);
+  set('f-lot',l?.lot==='—'?'':l?.lot);
+  // Show numeric values in fields, not the formatted strings
+  set('f-val',l?.estValue||'');
+  set('f-offer',l?.offerAmt||'');
   set('f-stage',l?.stage||'New');set('f-score',l?.score||'B');set('f-notes',l?.notes);
   QUAL_LABELS.forEach((_,i)=>{const e=document.getElementById('q'+i);if(e)e.checked=l?!!(l.q||[])[i]:false;});
   document.getElementById('lead-modal').classList.add('open');
 }
 function closeLeadModal(){document.getElementById('lead-modal').classList.remove('open');}
+
+// ═══ FIX 10: Parse estValue and offerAmt numerically; auto-calculate offer if blank ═══
 function saveLead(){
-  const addr=document.getElementById('f-addr').value.trim();
+  const addr=(document.getElementById('f-addr').value||'').trim();
   if(!addr){alert('Address required');return;}
+
+  const estValue  = parseFloat((document.getElementById('f-val').value||'').replace(/[$,]/g,''))   || 0;
+  const offerRaw  = parseFloat((document.getElementById('f-offer').value||'').replace(/[$,]/g,'')) || 0;
+  const offerAmt  = offerRaw || (estValue ? Math.round(estValue * 0.55) : 0);
+  const price     = estValue  ? '$' + estValue.toLocaleString()  : '—';
+  const offer     = offerAmt  ? '$' + offerAmt.toLocaleString()  : '';
+  const lotRaw    = (document.getElementById('f-lot').value||'').trim();
+  const lotSf     = parseFloat(lotRaw.replace(/,/g,'')) || 0;
+
   const data={
-    addr,rawAddr:addr,owner:(document.getElementById('f-owner').value||'').trim(),
+    addr, rawAddr:addr,
+    owner:(document.getElementById('f-owner').value||'').trim(),
     phone:(document.getElementById('f-phone').value||'').trim(),
     email:(document.getElementById('f-email').value||'').trim(),
     state:(document.getElementById('f-state').value||'FL').trim(),
     county:(document.getElementById('f-county').value||'').trim(),
     zip:(document.getElementById('f-zip').value||'').trim(),
-    lot:(document.getElementById('f-lot').value||'—').trim(),
-    price:(document.getElementById('f-val').value||'—').trim(),
-    offer:(document.getElementById('f-offer').value||'').trim(),
+    lot:lotSf ? lotSf.toLocaleString() : (lotRaw||'—'),
+    lotSf, estValue, price, offerAmt, offer,
     stage:document.getElementById('f-stage').value,
     score:document.getElementById('f-score').value,
     q:QUAL_LABELS.map((_,i)=>document.getElementById('q'+i)?.checked?1:0),
-    notes:(document.getElementById('f-notes').value||'').trim(),source:'Manual',
+    notes:(document.getElementById('f-notes').value||'').trim(),
+    source:'Manual',
   };
   if(editLId){
     const idx=leads.findIndex(x=>String(x.id)===String(editLId));
-    leads[idx]={...leads[idx],...data};toast('Lead updated',true);
+    if(idx>=0) leads[idx]={...leads[idx],...data};
+    toast('Lead updated',true);
   } else {
     leads.push(normL({id:'L'+Date.now()+'_'+Math.random().toString(36).slice(2,7),...data}));
     document.getElementById('lead-content').style.display='block';
@@ -1147,42 +1174,42 @@ const BUYER_DB = [
   {id:2018,name:'D.R. Horton — Austin',type:'National',state:'TX',counties:['Travis County','Williamson County','Hays County'],phone:'(512) 342-5700',email:'austinland@drhorton.com',contact:'Austin Division — Land',minlot:'10,000',budget:'$5M+',zips:'78660,78664,78626',activity:'hot',notes:'Top builder in Austin metro. Williamson County high volume focus. Express Homes very active.'},
   {id:2019,name:'Taylor Morrison — Austin',type:'National',state:'TX',counties:['Travis County','Williamson County'],phone:'(480) 840-8100',email:'austinland@taylormorrison.com',contact:'Austin Division Land',minlot:'10,000',budget:'$3M+',zips:'78660,78626,78681',activity:'active',notes:'Strong Austin presence. Move-up and luxury. Master-planned community developer.'},
   // ── CALIFORNIA ──
-  {id:2020,name:'D.R. Horton — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 697-6000',email:'caland@drhorton.com',contact:'CA Inland Empire Division',minlot:'10,000',budget:'$5M+',zips:'92503,92504,92505,92553',activity:'hot',notes:'Top 5 builder in Riverside/San Bernardino per Zonda March 2026 data. 80+ builders active in Inland Empire.'},
-  {id:2021,name:'Lennar Homes — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 808-5700',email:'caisland@lennar.com',contact:'IE Division Land',minlot:'10,000',budget:'$5M+',zips:'92503,92508,92553',activity:'hot',notes:'Active in Inland Empire with 41+ communities. Fastest-growing CA market. Buys finished lots and raw land.'},
+  {id:2020,name:'D.R. Horton — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 697-6000',email:'caland@drhorton.com',contact:'CA Inland Empire Division',minlot:'10,000',budget:'$5M+',zips:'92503,92504,92505,92553',activity:'hot',notes:'Top 5 builder in Riverside/San Bernardino per Zonda March 2026 data.'},
+  {id:2021,name:'Lennar Homes — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(951) 808-5700',email:'caisland@lennar.com',contact:'IE Division Land',minlot:'10,000',budget:'$5M+',zips:'92503,92508,92553',activity:'hot',notes:'Active in Inland Empire with 41+ communities. Fastest-growing CA market.'},
   {id:2022,name:'KB Home — Inland Empire',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(310) 231-4000',email:'caisland.land@kbhome.com',contact:'CA Inland Empire Division',minlot:'8,000',budget:'$3M+',zips:'92503,92504,92505',activity:'hot',notes:'$2.84B national land investment 2024, up 58%. Inland Empire is a priority market.'},
   {id:2023,name:'Century Communities — California',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(303) 770-8300',email:'caland@centurycommunities.com',contact:'CA Division Land',minlot:'8,000',budget:'$2M+',zips:'92503,92553,92557',activity:'active',notes:'Active in Inland Empire. Budget-friendly product. Strong CA presence.'},
-  {id:2024,name:'Meritage Homes — Southern CA',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(480) 515-8100',email:'caland@meritagehomes.com',contact:'SoCal Division Land',minlot:'10,000',budget:'$3M+',zips:'92503,92508',activity:'active',notes:'Energy Star builder. Active Inland Empire presence. Quarterly land review committee.'},
-  {id:2025,name:'Toll Brothers — California',type:'National',state:'CA',counties:['Los Angeles County','Orange County','San Diego County'],phone:'(949) 753-4004',email:'caland@tollbrothers.com',contact:'CA Division — Land Acquisitions',minlot:'15,000',budget:'$10M+',zips:'90210,91001,92660',activity:'active',notes:'Luxury builder. High-value lots in coastal and foothill communities. CA division based in Irvine.'},
+  {id:2024,name:'Meritage Homes — Southern CA',type:'National',state:'CA',counties:['Riverside County','San Bernardino County'],phone:'(480) 515-8100',email:'caland@meritagehomes.com',contact:'SoCal Division Land',minlot:'10,000',budget:'$3M+',zips:'92503,92508',activity:'active',notes:'Energy Star builder. Active Inland Empire presence.'},
+  {id:2025,name:'Toll Brothers — California',type:'National',state:'CA',counties:['Los Angeles County','Orange County','San Diego County'],phone:'(949) 753-4004',email:'caland@tollbrothers.com',contact:'CA Division — Land Acquisitions',minlot:'15,000',budget:'$10M+',zips:'90210,91001,92660',activity:'active',notes:'Luxury builder. High-value lots in coastal and foothill communities.'},
   // ── ARIZONA ──
-  {id:2026,name:'D.R. Horton — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 956-4000',email:'azland@drhorton.com',contact:'AZ Division — Land (HBACA Vice Chairman)',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323,85301',activity:'hot',notes:'Top builder in Phoenix metro. HBACA Vice Chairman role. Express and Freedom Homes active in outer suburbs.'},
-  {id:2027,name:'Lennar Homes — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 437-1300',email:'azland@lennar.com',contact:'AZ Division Land (HBACA Treasurer)',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323',activity:'hot',notes:'HBACA Treasurer. Major AZ land buyer. Fast acquisition — 30 day close on finished lots.'},
-  {id:2028,name:'Taylor Morrison — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 840-8100',email:'azland@taylormorrison.com',contact:'AZ Division (HBACA Past Chairman)',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323',activity:'hot',notes:'HBACA Immediate Past Chairman. Move-up and lifestyle communities. Strong government relationships.'},
-  {id:2029,name:'Meritage Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 515-8100',email:'azland@meritagehomes.com',contact:'AZ Division — Rebecca Lundberg (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323,85340',activity:'active',notes:'HBACA board member. Energy Star construction. Pinal County expansion focus.'},
-  {id:2030,name:'PulteGroup — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 368-7500',email:'azland@pultegroup.com',contact:'AZ Division — Michelle Gregorec (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. Del Webb active adult + Pulte Homes brands. Dedicated land acquisitions staff.'},
-  {id:2031,name:'K. Hovnanian — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(732) 747-7800',email:'azland@khov.com',contact:'AZ Division — Vaughn Wright (HBACA Board)',minlot:'10,000',budget:'$2M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. Acquires finished lots in master-planned communities.'},
-  {id:2032,name:'Century Communities — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(303) 770-8300',email:'azland@centurycommunities.com',contact:'AZ Division — Taylor Lilly (HBACA Board)',minlot:'8,000',budget:'$2M+',zips:'85338,85339,85323',activity:'active',notes:'HBACA board member. Starlight Homes brand (affordable) active in AZ.'},
-  {id:2033,name:'Beazer Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(770) 829-3700',email:'azland@beazer.com',contact:'AZ Division — Joe Vannelli (HBACA Board)',minlot:'8,000',budget:'$1.5M+',zips:'85338,85323,85301',activity:'active',notes:'HBACA board member. National builder. Energy-efficient homes.'},
-  {id:2034,name:'Mattamy Homes — Arizona',type:'National',state:'AZ',counties:['Pinal County','Maricopa County'],phone:'(647) 479-9696',email:'azland@mattamyhomes.com',contact:'AZ Division — Don Barrineau (HBACA Board)',minlot:'10,000',budget:'$3M+',zips:'85138,85142,85193',activity:'active',notes:'HBACA board member. Pinal County focus for master-planned communities.'},
+  {id:2026,name:'D.R. Horton — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 956-4000',email:'azland@drhorton.com',contact:'AZ Division — Land',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323,85301',activity:'hot',notes:'Top builder in Phoenix metro. Express and Freedom Homes active in outer suburbs.'},
+  {id:2027,name:'Lennar Homes — Phoenix',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(602) 437-1300',email:'azland@lennar.com',contact:'AZ Division Land',minlot:'8,000',budget:'$5M+',zips:'85338,85339,85323',activity:'hot',notes:'Major AZ land buyer. Fast acquisition — 30 day close on finished lots.'},
+  {id:2028,name:'Taylor Morrison — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 840-8100',email:'azland@taylormorrison.com',contact:'AZ Division',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323',activity:'hot',notes:'Move-up and lifestyle communities. Strong government relationships.'},
+  {id:2029,name:'Meritage Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 515-8100',email:'azland@meritagehomes.com',contact:'AZ Division',minlot:'10,000',budget:'$3M+',zips:'85338,85339,85323,85340',activity:'active',notes:'Energy Star construction. Pinal County expansion focus.'},
+  {id:2030,name:'PulteGroup — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(480) 368-7500',email:'azland@pultegroup.com',contact:'AZ Division',minlot:'10,000',budget:'$3M+',zips:'85338,85323,85301',activity:'active',notes:'Del Webb active adult + Pulte Homes brands. Dedicated land acquisitions staff.'},
+  {id:2031,name:'K. Hovnanian — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(732) 747-7800',email:'azland@khov.com',contact:'AZ Division',minlot:'10,000',budget:'$2M+',zips:'85338,85323,85301',activity:'active',notes:'Acquires finished lots in master-planned communities.'},
+  {id:2032,name:'Century Communities — Arizona',type:'National',state:'AZ',counties:['Maricopa County','Pinal County'],phone:'(303) 770-8300',email:'azland@centurycommunities.com',contact:'AZ Division',minlot:'8,000',budget:'$2M+',zips:'85338,85339,85323',activity:'active',notes:'Starlight Homes brand (affordable) active in AZ.'},
+  {id:2033,name:'Beazer Homes — Arizona',type:'National',state:'AZ',counties:['Maricopa County'],phone:'(770) 829-3700',email:'azland@beazer.com',contact:'AZ Division',minlot:'8,000',budget:'$1.5M+',zips:'85338,85323,85301',activity:'active',notes:'National builder. Energy-efficient homes.'},
+  {id:2034,name:'Mattamy Homes — Arizona',type:'National',state:'AZ',counties:['Pinal County','Maricopa County'],phone:'(647) 479-9696',email:'azland@mattamyhomes.com',contact:'AZ Division',minlot:'10,000',budget:'$3M+',zips:'85138,85142,85193',activity:'active',notes:'Pinal County focus for master-planned communities.'},
   // ── SOUTH CAROLINA ──
   {id:2035,name:'D.R. Horton — Charleston',type:'National',state:'SC',counties:['Charleston County','Berkeley County','Dorchester County'],phone:'(843) 760-8100',email:'scland@drhorton.com',contact:'SC Division — Land',minlot:'8,000',budget:'$2M+',zips:'29401,29403,29405,29455',activity:'hot',notes:'Top builder in Charleston metro. Express Homes very active. Cash buyer, 30-45 day close.'},
   {id:2036,name:'Lennar Homes — Charleston',type:'National',state:'SC',counties:['Charleston County','Berkeley County','Dorchester County'],phone:'(843) 576-8300',email:'scland@lennar.com',contact:'SC Division Land',minlot:'8,000',budget:'$2M+',zips:'29401,29405,29455',activity:'active',notes:'Active in Low Country SC. Fast close — 45 days max.'},
-  {id:2037,name:'LGI Homes — South Carolina',type:'National',state:'SC',counties:['Charleston County','Horry County','Richland County'],phone:'(281) 362-8998',email:'scland@lgihomes.com',contact:'SE Division — Land',minlot:'6,000',budget:'$1M+',zips:'29401,29405,29445',activity:'active',notes:'Fastest-growing builder in SC. Affordable zero-down communities. High-volume lot acquirer.'},
+  {id:2037,name:'LGI Homes — South Carolina',type:'National',state:'SC',counties:['Charleston County','Horry County','Richland County'],phone:'(281) 362-8998',email:'scland@lgihomes.com',contact:'SE Division — Land',minlot:'6,000',budget:'$1M+',zips:'29401,29405,29445',activity:'active',notes:'Fastest-growing builder in SC. Affordable zero-down communities.'},
   {id:2038,name:'Meritage Homes — South Carolina',type:'National',state:'SC',counties:['Charleston County','Greenville County'],phone:'(480) 515-8100',email:'scland@meritagehomes.com',contact:'SE Division Land',minlot:'8,000',budget:'$1.5M+',zips:'29401,29403,29609',activity:'active',notes:'Energy-efficient builder. Greenville and Charleston primary markets.'},
   {id:2039,name:'Stanley Martin Homes — SC',type:'Regional',state:'SC',counties:['Charleston County','York County'],phone:'(703) 680-3000',email:'land@stanleymartin.com',contact:'SE Division — Land Acquisitions',minlot:'8,000',budget:'$1M+',zips:'29401,29720',activity:'active',notes:'Mid-Atlantic/SE regional builder. Also active in NC, VA, MD, GA, FL.'},
-  {id:2040,name:'D.R. Horton — Myrtle Beach',type:'National',state:'SC',counties:['Horry County'],phone:'(843) 946-2100',email:'mbland@drhorton.com',contact:'Myrtle Beach Division — Land',minlot:'8,000',budget:'$2M+',zips:'29572,29575,29577,29579',activity:'hot',notes:'Very active in Horry County. Grand Strand is one of fastest-growing US markets. Pays cash, closes fast on individual lots.'},
-  {id:2041,name:'Dream Finders Homes — SC',type:'National',state:'SC',counties:['Horry County','Charleston County'],phone:'(904) 928-8000',email:'scland@dreamfindershomes.com',contact:'SC Division Land',minlot:'8,000',budget:'$1.5M+',zips:'29572,29575,29579',activity:'active',notes:'Acquired Liberty Communities January 2025. Growing SC presence. Active land buyer.'},
+  {id:2040,name:'D.R. Horton — Myrtle Beach',type:'National',state:'SC',counties:['Horry County'],phone:'(843) 946-2100',email:'mbland@drhorton.com',contact:'Myrtle Beach Division — Land',minlot:'8,000',budget:'$2M+',zips:'29572,29575,29577,29579',activity:'hot',notes:'Very active in Horry County. Grand Strand is one of fastest-growing US markets.'},
+  {id:2041,name:'Dream Finders Homes — SC',type:'National',state:'SC',counties:['Horry County','Charleston County'],phone:'(904) 928-8000',email:'scland@dreamfindershomes.com',contact:'SC Division Land',minlot:'8,000',budget:'$1.5M+',zips:'29572,29575,29579',activity:'active',notes:'Acquired Liberty Communities January 2025. Growing SC presence.'},
   // ── NORTH CAROLINA ──
-  {id:2042,name:'D.R. Horton — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(704) 731-8000',email:'ncland@drhorton.com',contact:'Charlotte Division — Land',minlot:'8,000',budget:'$3M+',zips:'28201,28202,28203,28204',activity:'hot',notes:'Top builder in Charlotte — 1,326 closings 2023, 75% market share among top 10. Very aggressive land buyer.'},
+  {id:2042,name:'D.R. Horton — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(704) 731-8000',email:'ncland@drhorton.com',contact:'Charlotte Division — Land',minlot:'8,000',budget:'$3M+',zips:'28201,28202,28203,28204',activity:'hot',notes:'Top builder in Charlotte — 1,326 closings 2023, 75% market share among top 10.'},
   {id:2043,name:'Lennar Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Iredell County'],phone:'(704) 566-8000',email:'ncland@lennar.com',contact:'Charlotte Division Land',minlot:'8,000',budget:'$3M+',zips:'28201,28202,28212,28213',activity:'hot',notes:'Major Charlotte builder. Acquired Rausch Coleman Feb 2025 expanding SE presence.'},
-  {id:2044,name:'True Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County','Rowan County'],phone:'(704) 824-1660',email:'land@truehomes.com',contact:'Land Acquisition Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,28110,28025',activity:'hot',notes:'Only NC-based company in Charlotte top 10. 1,141 closings 2023, 10% market share. Active buyer of individual lots.'},
+  {id:2044,name:'True Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County','Rowan County'],phone:'(704) 824-1660',email:'land@truehomes.com',contact:'Land Acquisition Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,28110,28025',activity:'hot',notes:'Only NC-based company in Charlotte top 10. 1,141 closings 2023. Active buyer of individual lots.'},
   {id:2045,name:'Ryan Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(703) 956-4000',email:'ncland@nvrinc.com',contact:'NVR Inc — Charlotte Division',minlot:'8,000',budget:'$2M+',zips:'28201,28202,28027,28025',activity:'active',notes:'23 communities in Mecklenburg County. NVR subsidiary. A+ rated builder.'},
-  {id:2046,name:'Meritage Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(480) 515-8100',email:'ncland@meritagehomes.com',contact:'SE Division Land',minlot:'8,000',budget:'$2M+',zips:'28201,28202,28110',activity:'active',notes:'Active in Charlotte. 300+ communities in 9 states. Energy Star standard.'},
-  {id:2047,name:'Eastwood Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Wake County','Guilford County'],phone:'(704) 399-2424',email:'land@eastwoodhomes.com',contact:'Land Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,27601,27602',activity:'active',notes:'NC/SC regional builder. Charlotte and Raleigh markets. Builds on individual lots — great for single-lot assignments.'},
+  {id:2046,name:'Meritage Homes — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Union County','Cabarrus County'],phone:'(480) 515-8100',email:'ncland@meritagehomes.com',contact:'SE Division Land',minlot:'8,000',budget:'$2M+',zips:'28201,28202,28110',activity:'active',notes:'Active in Charlotte. 300+ communities in 9 states.'},
+  {id:2047,name:'Eastwood Homes',type:'Regional',state:'NC',counties:['Mecklenburg County','Wake County','Guilford County'],phone:'(704) 399-2424',email:'land@eastwoodhomes.com',contact:'Land Department',minlot:'8,000',budget:'$1M+',zips:'28201,28202,27601,27602',activity:'active',notes:'NC/SC regional builder. Builds on individual lots — great for single-lot assignments.'},
   {id:2048,name:'D.R. Horton — Raleigh',type:'National',state:'NC',counties:['Wake County','Johnston County','Durham County'],phone:'(919) 645-6000',email:'raleighland@drhorton.com',contact:'Raleigh Division — Land',minlot:'8,000',budget:'$3M+',zips:'27601,27602,27603,27604',activity:'hot',notes:'Wake County added 66,000 units 2020-2024 — 6th most in US. Very active land buyer.'},
   {id:2049,name:'Lennar Homes — Raleigh',type:'National',state:'NC',counties:['Wake County','Johnston County','Chatham County'],phone:'(919) 651-2100',email:'raleighland@lennar.com',contact:'Raleigh Division Land',minlot:'8,000',budget:'$3M+',zips:'27601,27602,27520',activity:'hot',notes:'Strong Raleigh presence. Buying aggressively in Chatham and Johnston counties.'},
-  {id:2050,name:'Ashton Woods — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Wake County'],phone:'(678) 784-4000',email:'land@ashtonwoods.com',contact:'SE Division Land',minlot:'10,000',budget:'$2M+',zips:'28201,28202,27601',activity:'active',notes:'2023 Builder of the Year (BUILDER magazine). Design-forward homes. Active in Charlotte and Raleigh.'},
+  {id:2050,name:'Ashton Woods — Charlotte',type:'National',state:'NC',counties:['Mecklenburg County','Wake County'],phone:'(678) 784-4000',email:'land@ashtonwoods.com',contact:'SE Division Land',minlot:'10,000',budget:'$2M+',zips:'28201,28202,27601',activity:'active',notes:'2023 Builder of the Year (BUILDER magazine). Design-forward homes.'},
   {id:2051,name:'Stanley Martin Homes — Raleigh',type:'Regional',state:'NC',counties:['Wake County','Durham County','Chatham County'],phone:'(703) 680-3000',email:'raleighland@stanleymartin.com',contact:'Raleigh Division Land',minlot:'8,000',budget:'$1.5M+',zips:'27601,27701,27513',activity:'active',notes:'Active in Raleigh-Durham. Also active in SC, VA, MD, GA, FL.'},
-  {id:2052,name:'Brookfield Residential — NC',type:'National',state:'NC',counties:['Wake County','Durham County'],phone:'(403) 231-8900',email:'ncland@brookfieldresidential.com',contact:'SE Division Land',minlot:'10,000',budget:'$3M+',zips:'27601,27602,27701',activity:'active',notes:'Canadian-backed US developer. Master-planned community focus. Strong financial backing for large acquisitions.'},
+  {id:2052,name:'Brookfield Residential — NC',type:'National',state:'NC',counties:['Wake County','Durham County'],phone:'(403) 231-8900',email:'ncland@brookfieldresidential.com',contact:'SE Division Land',minlot:'10,000',budget:'$3M+',zips:'27601,27602,27701',activity:'active',notes:'Canadian-backed US developer. Master-planned community focus.'},
 ];
 
 // ═══════════════════════════════════════════
@@ -1292,8 +1319,8 @@ function buyerCard(b) {
       ${b.zips?`<span>Zips</span> ${b.zips}<br>`:''}
     </div>
     <div class="contact-row">
-      ${b.phone?`<span class="cpill ph" onclick="copy('${b.phone}')" title="Click to copy">&#9742; ${b.phone}</span>`:''}
-      ${b.email?`<span class="cpill em" onclick="copy('${b.email}')" title="Click to copy">&#9993; ${b.email}</span>`:''}
+      ${b.phone?`<span class="cpill ph" onclick="copy('${b.phone.replace(/'/g,'\\\'')}')" title="Click to copy">&#9742; ${b.phone}</span>`:''}
+      ${b.email?`<span class="cpill em" onclick="copy('${b.email.replace(/'/g,'\\\'')}')" title="Click to copy">&#9993; ${b.email}</span>`:''}
     </div>
     <div class="ctags">${(b.counties||[]).map(c=>`<span class="ctag">${c}</span>`).join('')}</div>
     ${b.notes?`<div style="font-size:10px;color:var(--text3);margin-top:7px;line-height:1.6;border-top:0.5px solid var(--border);padding-top:7px">${b.notes}</div>`:''}
@@ -1326,11 +1353,12 @@ function openBuyerModal(id) {
   document.getElementById('buyer-modal').classList.add('open');
 }
 function closeBuyerModal(){document.getElementById('buyer-modal').classList.remove('open');}
+
 function saveBuyer() {
   const name=(document.getElementById('b-name').value||'').trim();
   if(!name){alert('Name required');return;}
   const data={
-    name,type:document.getElementById('b-type').value,
+    name, type:document.getElementById('b-type').value,
     state:document.getElementById('b-state').value,
     counties:(document.getElementById('b-counties').value||'').split(',').map(s=>s.trim()).filter(Boolean),
     phone:(document.getElementById('b-phone').value||'').trim(),
@@ -1345,10 +1373,12 @@ function saveBuyer() {
   };
   if(editBId){
     const idx=buyers.findIndex(x=>String(x.id)===String(editBId));
-    if(idx>=0)buyers[idx]={...buyers[idx],...data};
+    // ═══ FIX 2: Keep original ID so mergeBuyers can deduplicate on next reload ═══
+    if(idx>=0) buyers[idx]={...buyers[idx],...data};
     toast('Buyer updated',true);
   } else {
-    buyers.push({id:nid++,...data});
+    // ═══ FIX 1: Use timestamp-based ID instead of resetting nid counter ═══
+    buyers.push({id: newBuyerId(), ...data});
     toast('Buyer added',true);
   }
   persist();closeBuyerModal();buildBuyerNav();renderBuyers();
@@ -1388,12 +1418,7 @@ function setView(v,btn){
 // SAVE / LOAD BACKUP
 // ═══════════════════════════════════════════
 function saveBackup() {
-  const data = {
-    version: 2,
-    savedAt: new Date().toISOString(),
-    leads: leads,
-    buyers_manual: buyers.filter(b => b.manual),
-  };
+  const data = { version: 2, savedAt: new Date().toISOString(), leads, buyers_manual: buyers.filter(b => b.manual) };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1404,18 +1429,15 @@ function saveBackup() {
 
 function loadBackup() {
   const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
+  input.type = 'file'; input.accept = '.json';
   input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if(!file) return;
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+      const data = JSON.parse(await file.text());
       if (!data.leads) { toast('Invalid backup file'); return; }
       leads  = (data.leads || []).map(normL);
-      const manual = data.buyers_manual || [];
-      buyers = [...BUYER_DB, ...manual];
+      // ═══ FIX 2: Use mergeBuyers on restore too ═══
+      buyers = mergeBuyers(BUYER_DB, data.buyers_manual || []);
       await persist();
       if(leads.length){
         document.getElementById('drop-zone').style.display='none';
@@ -1427,20 +1449,10 @@ function loadBackup() {
       selId = null;
       buildTerNav(); buildBuyerNav(); renderPipeline();
       toast(leads.length + ' leads restored from backup!', true);
-    } catch(err) {
-      toast('Could not read backup: ' + err.message);
-    }
+    } catch(err) { toast('Could not read backup: ' + err.message); }
   };
   input.click();
 }
-
-// Update sync indicator after every persist
-const _origPersist = persist;
-persist = async function() {
-  await _origPersist();
-  const el = document.getElementById('sync-info');
-  if (el) el.textContent = leads.length + ' leads · saved ' + new Date().toLocaleTimeString();
-};
 
 // ═══════════════════════════════════════════
 // EXPORT
@@ -1481,9 +1493,7 @@ function toast(msg,gold){
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
-// ── ASYNC INIT — loads from cloud storage first ──
 (async () => {
-  // Show loading state
   document.getElementById('sync-info').textContent = 'Loading…';
   await hydrate();
   if(leads.length){
