@@ -923,6 +923,39 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       </div>
       <div class="stats" id="buyer-stats" style="grid-template-columns:repeat(6,1fr)"></div>
       <div id="buyer-content"></div>
+
+      <!-- ═══ BUY BOX FILES SECTION ═══ -->
+      <div id="buybox-section" style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.08)">
+        <div class="ph" style="margin-bottom:16px">
+          <div>
+            <div class="ph-title" style="font-size:18px">Buy Box <span>Files</span></div>
+            <div class="ph-sub">Upload and view builder acquisition criteria — organized by buyer</div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center">
+            <select class="fi" id="bb-buyer-filter" onchange="renderBuyBoxFiles()">
+              <option value="">All buyers</option>
+            </select>
+            <button class="btn btn-gold" onclick="openBBUpload()">+ Upload Buy Box</button>
+          </div>
+        </div>
+
+        <!-- Drop zone -->
+        <div id="bb-dropzone"
+          style="border:2px dashed rgba(184,149,42,0.28);border-radius:var(--r);padding:28px 22px;text-align:center;cursor:pointer;background:rgba(184,149,42,0.03);transition:all .2s;margin-bottom:16px"
+          onclick="document.getElementById('bb-file-input').click()"
+          ondragover="event.preventDefault();this.style.background='rgba(184,149,42,0.08)';this.style.borderColor='var(--gold)'"
+          ondragleave="this.style.background='rgba(184,149,42,0.03)';this.style.borderColor='rgba(184,149,42,0.28)'"
+          ondrop="event.preventDefault();this.style.background='rgba(184,149,42,0.03)';this.style.borderColor='rgba(184,149,42,0.28)';handleBBDrop(event)">
+          <div style="font-size:28px;margin-bottom:8px">📁</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);font-family:'Playfair Display',serif;margin-bottom:3px">Drop buy box files here or click to browse</div>
+          <div style="font-size:11px;color:var(--text3)">PDF, Excel, Word, or images · Up to 5MB per file</div>
+          <input type="file" id="bb-file-input" style="display:none" multiple
+            accept=".pdf,.xlsx,.xls,.docx,.doc,.png,.jpg,.jpeg"
+            onchange="handleBBFileSelect(this)">
+        </div>
+
+        <div id="bb-files-grid"></div>
+      </div>
     </div>
 
     <!-- ═══ OUTREACH PAGE ═══ -->
@@ -1047,6 +1080,13 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
           <div class="aui-field"><label>Confirm password</label><input type="password" id="cp-pass2" placeholder="Repeat password"></div>
           <div class="aui-field"><label>&nbsp;</label><button class="btn btn-gold" onclick="doChangePassword()">Update</button></div>
         </div>
+      </div>
+
+      <!-- Restore deleted buyers -->
+      <div class="settings-section" id="restore-buyers-section" style="display:none">
+        <div class="settings-section-title">Restore Buyers</div>
+        <div class="settings-section-sub" id="restore-buyers-sub"></div>
+        <button class="btn btn-green" onclick="restoreAllBuyers()">↺ Restore All Deleted Buyers</button>
       </div>
     </div>
 
@@ -1176,6 +1216,51 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
   </div>
 </div>
 
+<!-- BUY BOX UPLOAD MODAL -->
+<div class="modal-bg" id="bb-upload-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-hd">
+      <div class="modal-title">📁 Upload Buy Box</div>
+      <button class="modal-x" onclick="closeBBUpload()">×</button>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+      <div id="bb-pending-label" style="font-weight:600;color:var(--text)">No file selected</div>
+      <div id="bb-pending-size" style="font-size:10px;color:var(--text3);margin-top:2px"></div>
+    </div>
+    <div class="fg">
+      <div class="fgrp full">
+        <label>Builder / buyer</label>
+        <select id="bb-buyer-select"><option value="">Select a buyer…</option></select>
+      </div>
+      <div class="fgrp full">
+        <label>Notes (optional)</label>
+        <textarea id="bb-notes" placeholder="e.g. Q4 2024 criteria · min 8,000 sf lots · Lee & Collier counties…" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeBBUpload()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveBBFiles()">Save File(s)</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUY BOX FILE VIEWER MODAL -->
+<div class="modal-bg" id="bb-viewer-modal">
+  <div class="modal" style="width:820px;max-width:96vw">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="bb-viewer-title">Buy Box</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="bb-viewer-meta"></div>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center">
+        <button class="btn btn-sm btn-gold" id="bb-dl-btn">↓ Download</button>
+        <button class="modal-x" onclick="closeBBViewer()">×</button>
+      </div>
+    </div>
+    <div id="bb-viewer-body" style="min-height:420px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:var(--rs);overflow:hidden"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><div class="tdot" id="tdot"></div><span id="tmsg"></span></div>
 
 <script>
@@ -1212,6 +1297,7 @@ const TABLE_COLS = [
 // STATE
 // ═══════════════════════════════════════════
 let leads=[], buyers=[], selId=null, editLId=null, editBId=null, sortCol=null, sortDir=1;
+let deletedBuyerIds = []; // tracks removed built-in buyers so they stay gone on reload
 let pipeState='', pipeCounty='', buyerState='', buyerCounty='';
 let currentPage = 'pipeline';
 
@@ -1231,7 +1317,9 @@ function newBuyerId() {
 function mergeBuyers(dbBuyers, manualBuyers) {
   const map = new Map();
   dbBuyers.forEach(b => map.set(String(b.id), b));
-  manualBuyers.forEach(b => map.set(String(b.id), b)); // saved version wins
+  manualBuyers.forEach(b => map.set(String(b.id), b));
+  // Remove any buyers the user has explicitly deleted
+  deletedBuyerIds.forEach(id => map.delete(String(id)));
   return Array.from(map.values());
 }
 
@@ -1258,11 +1346,13 @@ async function persist() {
         'Prefer':        'resolution=merge-duplicates'
       },
       body: JSON.stringify({
-        id:            'main',
-        leads:         payload.leads,
-        buyers_manual: payload.buyers_manual,
-        outreach:      payload.outreach,
-        updated_at:    new Date().toISOString(),
+        id:                'main',
+        leads:             payload.leads,
+        buyers_manual:     payload.buyers_manual,
+        outreach:          payload.outreach,
+        buyer_file_meta:   buyerFiles,
+        deleted_buyer_ids: deletedBuyerIds,
+        updated_at:        new Date().toISOString(),
       })
     });
     if (resp.ok) {
@@ -1345,9 +1435,11 @@ async function hydrate() {
 
   // ── Apply data ──
   if (data && data.leads && data.leads.length > 0) {
-    leads    = (data.leads || []).map(normL);
-    buyers   = mergeBuyers(BUYER_DB, data.buyers_manual || []);
-    outreach = data.outreach || [];
+    leads          = (data.leads || []).map(normL);
+    deletedBuyerIds = data.deleted_buyer_ids || [];
+    buyers         = mergeBuyers(BUYER_DB, data.buyers_manual || []);
+    outreach       = data.outreach || [];
+    buyerFiles     = data.buyer_file_meta || [];
   } else {
     leads    = [];
     buyers   = [...BUYER_DB];
@@ -2155,7 +2247,7 @@ function buyerCard(b) {
     ${b.notes?`<div style="font-size:10px;color:var(--text3);margin-top:7px;line-height:1.6;border-top:0.5px solid var(--border);padding-top:7px">${b.notes}</div>`:''}
     <div style="display:flex;gap:5px;margin-top:9px">
       <button class="btn btn-sm" onclick="openBuyerModal('${b.id}')" style="flex:1;justify-content:center">Edit</button>
-      ${b.manual?`<button class="btn btn-sm btn-red" onclick="delBuyer('${b.id}')" style="padding:3px 7px">✕</button>`:''}
+      ${b.manual?`<button class="btn btn-sm btn-red" onclick="delBuyer('${b.id}')" style="padding:3px 7px">✕ Remove</button>`:`<button class="btn btn-sm btn-red" onclick="delBuyer('${b.id}')" style="padding:3px 7px">✕ Remove</button>`}
     </div>
   </div>`;
 }
@@ -2213,9 +2305,11 @@ function saveBuyer() {
   persist();closeBuyerModal();buildBuyerNav();renderBuyers();
 }
 function delBuyer(id){
-  if(!confirm('Remove this buyer?'))return;
-  buyers=buyers.filter(x=>String(x.id)!==String(id));
-  persist();buildBuyerNav();renderBuyers();toast('Buyer removed');
+  if(!confirm('Remove this buyer? Built-in buyers can be restored by clearing the deleted list in Settings.'))return;
+  // Track deleted ID so built-in buyers don't reappear on reload
+  if (!deletedBuyerIds.includes(String(id))) deletedBuyerIds.push(String(id));
+  buyers = buyers.filter(x=>String(x.id)!==String(id));
+  persist(); buildBuyerNav(); renderBuyers(); toast('Buyer removed');
 }
 
 // ═══════════════════════════════════════════
@@ -2235,7 +2329,7 @@ function switchPage(page, btn) {
   document.getElementById('add-btn').onclick     = isPipe?()=>openLeadModal(null):page==='buyers'?()=>openBuyerModal(null):()=>openLeadModal(null);
   document.getElementById('sidebar-add-btn').textContent = isPipe?'+ Add lead':page==='buyers'?'+ Add buyer':'+ Add lead';
   document.getElementById('sidebar-add-btn').onclick     = isPipe?()=>openLeadModal(null):page==='buyers'?()=>openBuyerModal(null):()=>openLeadModal(null);
-  if(page==='buyers'){renderBuyers();buildBuyerNav();}
+  if(page==='buyers'){renderBuyers();buildBuyerNav();renderBuyBoxFiles();}
   if(page==='outreach'){renderOutreachPage();}
   if(page==='settings'){renderSettingsPage();}
 }
@@ -2319,7 +2413,7 @@ function toast(msg,gold){
 // ═══════════════════════════════════════════
 // MODAL CLOSE ON BACKDROP
 // ═══════════════════════════════════════════
-['lead-modal','buyer-modal','myinfo-modal','send-modal'].forEach(id=>{
+['lead-modal','buyer-modal','myinfo-modal','send-modal','bb-upload-modal','bb-viewer-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');});
 });
 
@@ -2330,6 +2424,8 @@ let outreach = [];
 let selOutreachLot = null;
 let selOutreachBuyers = new Set();
 let myInfo = {};
+let buyerFiles = [];       // metadata only (id, buyerId, name, size, type, date, notes)
+let pendingBBFiles = [];   // files awaiting buyer assignment
 
 function loadMyInfo() {
   try { myInfo = JSON.parse(localStorage.getItem('fm_myinfo') || '{}'); } catch(e) { myInfo = {}; }
@@ -2939,6 +3035,15 @@ async function doChangePassword() {
   document.getElementById('cp-pass2').value='';
 }
 
+async function restoreAllBuyers() {
+  if (!confirm('Restore all ' + deletedBuyerIds.length + ' deleted buyer(s)? They will reappear in the Buyer CRM.')) return;
+  deletedBuyerIds = [];
+  buyers = mergeBuyers(BUYER_DB, buyers.filter(b => b.manual));
+  await persist();
+  renderSettingsPage();
+  toast('All buyers restored', true);
+}
+
 function renderSettingsPage() {
   // User list
   const rows = document.getElementById('user-list-rows');
@@ -2957,11 +3062,256 @@ function renderSettingsPage() {
         </div>`).join('');
     }
   }
-  // Password change user select
+  // Show/hide restore section
+  const restoreSection = document.getElementById('restore-buyers-section');
+  const restoreSub     = document.getElementById('restore-buyers-sub');
+  if (restoreSection) {
+    if (deletedBuyerIds.length > 0) {
+      restoreSection.style.display = '';
+      restoreSub.textContent = deletedBuyerIds.length + ' built-in buyer'+(deletedBuyerIds.length===1?' has':'s have')+' been removed from the CRM.';
+    } else {
+      restoreSection.style.display = 'none';
+    }
+  }
   const cpSel = document.getElementById('cp-user');
   if (cpSel) {
     cpSel.innerHTML='<option value="">Select user…</option>'+appUsers.map(u=>`<option value="${u.id}">${u.name||u.username} (${u.username})</option>`).join('');
   }
+}
+
+// ═══════════════════════════════════════════
+// BUY BOX FILE STORAGE
+// Metadata → Supabase | Actual file data → localStorage
+// ═══════════════════════════════════════════
+function bbSaveFileData(id, base64Data) {
+  try {
+    const store = JSON.parse(localStorage.getItem('fm_bb_files') || '{}');
+    store[id] = base64Data;
+    localStorage.setItem('fm_bb_files', JSON.stringify(store));
+    return true;
+  } catch(e) { console.warn('File storage quota:', e.message); return false; }
+}
+function bbGetFileData(id) {
+  try { return (JSON.parse(localStorage.getItem('fm_bb_files') || '{}'))[id] || null; }
+  catch(e) { return null; }
+}
+function bbRemoveFileData(id) {
+  try {
+    const store = JSON.parse(localStorage.getItem('fm_bb_files') || '{}');
+    delete store[id]; localStorage.setItem('fm_bb_files', JSON.stringify(store));
+  } catch(e) {}
+}
+
+function bbFormatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/(1024*1024)).toFixed(1)+' MB';
+}
+function bbIcon(type) {
+  if (type==='application/pdf') return '📄';
+  if (type.includes('sheet')||type.includes('excel')||type.includes('xlsx')||type.includes('xls')) return '📊';
+  if (type.includes('word')||type.includes('doc')) return '📝';
+  if (type.startsWith('image/')) return '🖼';
+  return '📁';
+}
+function bbBadge(type) {
+  if (type==='application/pdf') return 'PDF';
+  if (type.includes('sheet')||type.includes('excel')||type.includes('xlsx')||type.includes('xls')) return 'XLS';
+  if (type.includes('word')||type.includes('doc')) return 'DOC';
+  if (type.startsWith('image/')) return 'IMG';
+  return 'FILE';
+}
+
+// ── File selection ──
+function handleBBFileSelect(input) {
+  const files = Array.from(input.files);
+  if (files.length) { pendingBBFiles = files; showBBUploadModal(); }
+  input.value = '';
+}
+function handleBBDrop(e) {
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) { pendingBBFiles = files; showBBUploadModal(); }
+}
+function openBBUpload() {
+  pendingBBFiles = [];
+  document.getElementById('bb-pending-label').textContent = 'No file selected — click Save to pick a file';
+  document.getElementById('bb-pending-size').textContent = '';
+  showBBUploadModal();
+}
+function showBBUploadModal() {
+  if (pendingBBFiles.length === 1) {
+    document.getElementById('bb-pending-label').textContent = pendingBBFiles[0].name;
+    document.getElementById('bb-pending-size').textContent = bbFormatSize(pendingBBFiles[0].size) + ' · ' + (pendingBBFiles[0].type||'unknown type');
+  } else if (pendingBBFiles.length > 1) {
+    document.getElementById('bb-pending-label').textContent = pendingBBFiles.length + ' files selected';
+    document.getElementById('bb-pending-size').textContent = pendingBBFiles.map(f=>f.name).join(', ');
+  }
+  const sel = document.getElementById('bb-buyer-select');
+  sel.innerHTML = '<option value="">Select a buyer…</option>' +
+    buyers.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  document.getElementById('bb-notes').value = '';
+  document.getElementById('bb-upload-modal').classList.add('open');
+}
+function closeBBUpload() {
+  document.getElementById('bb-upload-modal').classList.remove('open');
+  pendingBBFiles = [];
+}
+
+async function saveBBFiles() {
+  const buyerId = document.getElementById('bb-buyer-select').value;
+  const notes   = (document.getElementById('bb-notes').value||'').trim();
+  if (!buyerId) { toast('Please select a buyer first'); return; }
+
+  // If no pending files, open file picker
+  if (!pendingBBFiles.length) {
+    document.getElementById('bb-file-input').click();
+    return;
+  }
+
+  const buyer = buyers.find(b=>String(b.id)===String(buyerId));
+  if (!buyer) return;
+
+  let saved = 0;
+  for (const file of pendingBBFiles) {
+    if (file.size > 5*1024*1024) { toast('Skipped (>5MB): '+file.name); continue; }
+    try {
+      const base64 = await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=e=>res(e.target.result);
+        r.onerror=()=>rej(new Error('Read failed'));
+        r.readAsDataURL(file);
+      });
+      const id = 'F'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+      const meta = {
+        id, buyerId:String(buyer.id), buyerName:buyer.name,
+        fileName:file.name, fileType:file.type||'application/octet-stream',
+        fileSize:file.size, notes, uploadedAt:new Date().toISOString(),
+      };
+      const ok = bbSaveFileData(id, base64);
+      if (ok) { buyerFiles.push(meta); saved++; }
+      else { toast('Storage full — could not save: '+file.name); }
+    } catch(e) { toast('Error reading: '+file.name); }
+  }
+
+  if (saved) {
+    await persist();
+    closeBBUpload();
+    renderBuyBoxFiles();
+    toast(saved+' file'+(saved>1?'s':'')+' saved for '+buyer.name, true);
+  }
+}
+
+// ── Render ──
+function renderBuyBoxFiles() {
+  const grid = document.getElementById('bb-files-grid');
+  if (!grid) return;
+
+  // Populate filter dropdown
+  const filterEl = document.getElementById('bb-buyer-filter');
+  if (filterEl) {
+    const cur = filterEl.value;
+    const buyerIds = [...new Set(buyerFiles.map(f=>f.buyerId))];
+    filterEl.innerHTML = '<option value="">All buyers</option>' +
+      buyerIds.map(bid=>{
+        const f = buyerFiles.find(x=>x.buyerId===bid);
+        return `<option value="${bid}" ${cur===bid?'selected':''}>${f?.buyerName||bid}</option>`;
+      }).join('');
+    if (buyerIds.includes(cur)) filterEl.value = cur;
+  }
+
+  const filterBuyer = (filterEl||{value:''}).value;
+  const data = filterBuyer ? buyerFiles.filter(f=>f.buyerId===filterBuyer) : buyerFiles;
+
+  if (!data.length) {
+    grid.innerHTML = `<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px;background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:var(--r)">
+      <div style="font-size:32px;margin-bottom:12px">📁</div>
+      <div style="font-size:14px;font-weight:600;font-family:'Playfair Display',serif;color:var(--text2);margin-bottom:4px">No buy box files yet</div>
+      <div>Upload a builder's buy box criteria document to get started</div>
+    </div>`;
+    return;
+  }
+
+  // Group by buyer
+  const groups = {};
+  data.forEach(f=>{ if(!groups[f.buyerId]) groups[f.buyerId]={name:f.buyerName,files:[]}; groups[f.buyerId].files.push(f); });
+
+  grid.innerHTML = Object.entries(groups).map(([,g])=>`
+    <div style="margin-bottom:22px">
+      <div style="font-size:9.5px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.10em;margin-bottom:10px;padding:7px 13px;background:rgba(184,149,42,0.07);border:1px solid rgba(184,149,42,0.16);border-radius:var(--rs);display:flex;align-items:center;justify-content:space-between;font-family:'Montserrat',sans-serif">
+        <span>${g.name}</span>
+        <span style="background:rgba(184,149,42,0.15);color:var(--gold);padding:1px 8px;border-radius:10px;font-weight:700">${g.files.length} file${g.files.length===1?'':'s'}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">
+        ${g.files.map(f=>{
+          const hasData = !!bbGetFileData(f.id);
+          return `<div style="background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:var(--rs);padding:14px 15px;box-shadow:var(--sh-xs);transition:all .15s;display:flex;flex-direction:column;gap:9px"
+            onmouseenter="this.style.boxShadow='var(--sh-sm)';this.style.borderColor='rgba(0,0,0,0.13)'"
+            onmouseleave="this.style.boxShadow='var(--sh-xs)';this.style.borderColor='rgba(0,0,0,0.08)'">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:30px;flex-shrink:0">${bbIcon(f.fileType)}</span>
+              <div style="min-width:0;flex:1">
+                <div style="font-size:11.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'Montserrat',sans-serif" title="${f.fileName}">${f.fileName}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">${bbFormatSize(f.fileSize)} · ${new Date(f.uploadedAt).toLocaleDateString()}</div>
+              </div>
+              <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);flex-shrink:0;font-family:'Montserrat',sans-serif">${bbBadge(f.fileType)}</span>
+            </div>
+            ${f.notes?`<div style="font-size:10px;color:var(--text3);background:var(--bg3);padding:6px 9px;border-radius:5px;line-height:1.55;font-family:'Montserrat',sans-serif">${f.notes}</div>`:''}
+            ${!hasData?`<div style="font-size:10px;color:var(--amber);background:var(--amber-bg);padding:4px 8px;border-radius:4px;font-family:'Montserrat',sans-serif">⚠ File not in local storage — re-upload to view</div>`:''}
+            <div style="display:flex;gap:5px">
+              <button class="btn btn-sm btn-gold" onclick="viewBBFile('${f.id}')" style="flex:1;justify-content:center;font-size:11px" ${!hasData?'disabled style="opacity:0.5;cursor:not-allowed"':''}>👁 View</button>
+              <button class="btn btn-sm" onclick="downloadBBFile('${f.id}')" title="Download" style="padding:4px 10px" ${!hasData?'disabled style="opacity:0.5"':''}>↓</button>
+              <button class="btn btn-sm btn-red" onclick="deleteBBFile('${f.id}')" title="Delete" style="padding:4px 10px">✕</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── View ──
+function viewBBFile(id) {
+  const meta = buyerFiles.find(x=>x.id===id);
+  if (!meta) return;
+  const data = bbGetFileData(id);
+  if (!data) { toast('File not found in local storage — please re-upload'); return; }
+
+  document.getElementById('bb-viewer-title').textContent = meta.fileName;
+  document.getElementById('bb-viewer-meta').textContent  = meta.buyerName + ' · ' + bbFormatSize(meta.fileSize) + ' · ' + new Date(meta.uploadedAt).toLocaleDateString();
+  document.getElementById('bb-dl-btn').onclick = ()=>downloadBBFile(id);
+
+  const body = document.getElementById('bb-viewer-body');
+  if (meta.fileType === 'application/pdf') {
+    body.innerHTML = `<iframe src="${data}" style="width:100%;height:72vh;border:none;display:block"></iframe>`;
+  } else if (meta.fileType.startsWith('image/')) {
+    body.innerHTML = `<img src="${data}" style="max-width:100%;max-height:72vh;object-fit:contain;display:block;margin:auto;padding:12px">`;
+  } else {
+    body.innerHTML = `<div style="text-align:center;padding:48px">
+      <div style="font-size:52px;margin-bottom:16px">${bbIcon(meta.fileType)}</div>
+      <div style="font-size:15px;font-weight:700;font-family:'Playfair Display',serif;color:var(--text);margin-bottom:6px">${meta.fileName}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:22px">${bbBadge(meta.fileType)} · ${bbFormatSize(meta.fileSize)}</div>
+      <button class="btn btn-gold" onclick="downloadBBFile('${id}')">↓ Download to View</button>
+    </div>`;
+  }
+  document.getElementById('bb-viewer-modal').classList.add('open');
+}
+function closeBBViewer() {
+  document.getElementById('bb-viewer-modal').classList.remove('open');
+  document.getElementById('bb-viewer-body').innerHTML = '';
+}
+function downloadBBFile(id) {
+  const meta = buyerFiles.find(x=>x.id===id);
+  const data = bbGetFileData(id);
+  if (!meta||!data) { toast('File data not found'); return; }
+  const a=document.createElement('a'); a.href=data; a.download=meta.fileName; a.click();
+}
+async function deleteBBFile(id) {
+  const meta = buyerFiles.find(x=>x.id===id);
+  if (!meta||!confirm('Delete "'+meta.fileName+'"?')) return;
+  buyerFiles = buyerFiles.filter(x=>x.id!==id);
+  bbRemoveFileData(id);
+  await persist();
+  renderBuyBoxFiles();
+  toast('File deleted');
 }
 
 // ═══════════════════════════════════════════
