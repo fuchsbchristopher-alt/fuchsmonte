@@ -1239,61 +1239,119 @@ function mergeBuyers(dbBuyers, manualBuyers) {
 // PERSIST / HYDRATE
 // ═══════════════════════════════════════════
 async function persist() {
-  const data = {
-    leads: leads,
+  const payload = {
+    leads:         leads,
     buyers_manual: buyers.filter(b => b.manual),
-    savedAt: new Date().toISOString(),
+    outreach:      outreach,
+    savedAt:       new Date().toISOString(),
   };
+
+  // ── PRIMARY: Supabase ──
+  let supabaseOk = false;
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/fm_data', {
+    const resp = await fetch(SUPABASE_URL + '/rest/v1/fm_data', {
       method: 'POST',
       headers: {
-        'apikey': SUPABASE_KEY,
+        'apikey':        SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
+        'Content-Type':  'application/json',
+        'Prefer':        'resolution=merge-duplicates'
       },
-      body: JSON.stringify({ id: 'main', leads: data.leads, buyers_manual: data.buyers_manual, outreach: outreach, updated_at: new Date().toISOString() })
+      body: JSON.stringify({
+        id:            'main',
+        leads:         payload.leads,
+        buyers_manual: payload.buyers_manual,
+        outreach:      payload.outreach,
+        updated_at:    new Date().toISOString(),
+      })
     });
-  } catch(e) { console.error('Supabase save error:', e); }
-  try { localStorage.setItem('fm_backup', JSON.stringify(data)); } catch(e) {}
+    if (resp.ok) {
+      supabaseOk = true;
+    } else {
+      // Supabase rejected — may not have 'outreach' column yet, retry without it
+      const resp2 = await fetch(SUPABASE_URL + '/rest/v1/fm_data', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          id: 'main', leads: payload.leads,
+          buyers_manual: payload.buyers_manual,
+          updated_at: new Date().toISOString()
+        })
+      });
+      supabaseOk = resp2.ok;
+    }
+  } catch(e) {
+    console.warn('[FuchsMonte] Supabase save failed:', e.message);
+  }
+
+  // ── FALLBACK: localStorage (only if Supabase failed) ──
+  if (!supabaseOk) {
+    try { localStorage.setItem('fm_backup', JSON.stringify(payload)); } catch(e) {
+      try {
+        localStorage.setItem('fm_backup', JSON.stringify({
+          leads: payload.leads, buyers_manual: payload.buyers_manual, savedAt: payload.savedAt
+        }));
+      } catch(e2) { console.warn('localStorage also failed:', e2.message); }
+    }
+  } else {
+    // Keep localStorage in sync as an emergency backup
+    try { localStorage.setItem('fm_backup', JSON.stringify(payload)); } catch(e) {}
+  }
+
   const el = document.getElementById('sync-info');
-  if (el) el.textContent = leads.length + ' leads · saved ' + new Date().toLocaleTimeString();
+  if (el) el.textContent = leads.length + ' leads · ' + (supabaseOk ? '☁ synced' : '⚠ saved locally') + ' ' + new Date().toLocaleTimeString();
 }
 // ═══ FIX 7: removed _origPersist double-wrap that was here ═══
 
 async function hydrate() {
   let data = null;
+
+  // ── PRIMARY: Supabase ──
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/fm_data?id=eq.main&select=*', {
       headers: {
-        'apikey': SUPABASE_KEY,
+        'apikey':        SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json'
+        'Content-Type':  'application/json'
       }
     });
-    const rows = await r.json();
-    if (rows && rows[0] && rows[0].leads) data = rows[0];
-  } catch(e) { console.error('Supabase load error:', e); }
+    if (r.ok) {
+      const rows = await r.json();
+      if (rows && rows[0] && rows[0].leads && rows[0].leads.length > 0) {
+        data = rows[0];
+        console.log('[FuchsMonte] ☁ Loaded from Supabase:', data.leads.length, 'leads');
+      }
+    }
+  } catch(e) { console.warn('[FuchsMonte] Supabase load failed — trying local backup'); }
 
-  if (!data) {
+  // ── FALLBACK: localStorage (only if Supabase had nothing) ──
+  if (!data || !data.leads || data.leads.length === 0) {
     try {
-      const raw = localStorage.getItem('fm_backup') || localStorage.getItem('fuchsmonte_data') || localStorage.getItem('fm_leads');
-      if (raw) { const p = JSON.parse(raw); data = Array.isArray(p) ? { leads: p, buyers_manual: [] } : p; }
-    } catch(e) {}
+      const raw = localStorage.getItem('fm_backup')
+               || localStorage.getItem('fuchsmonte_data')
+               || localStorage.getItem('fm_leads');
+      if (raw) {
+        const p = JSON.parse(raw);
+        data = Array.isArray(p) ? { leads: p, buyers_manual: [], outreach: [] } : p;
+        if (data.leads && data.leads.length > 0) {
+          console.log('[FuchsMonte] 💾 Loaded from local backup:', data.leads.length, 'leads');
+        }
+      }
+    } catch(e) { console.warn('[FuchsMonte] Local backup read failed:', e.message); }
   }
 
-  if (data && data.leads) {
-    leads = (data.leads || []).map(normL);
-    const manual = data.buyers_manual || [];
-    // ═══ FIX 2 applied here ═══
-    buyers = mergeBuyers(BUYER_DB, manual);
+  // ── Apply data ──
+  if (data && data.leads && data.leads.length > 0) {
+    leads    = (data.leads || []).map(normL);
+    buyers   = mergeBuyers(BUYER_DB, data.buyers_manual || []);
     outreach = data.outreach || [];
-    // ═══ FIX 6: removed unused `savedAt` variable ═══
-    console.log('[Fuchsmonte] Loaded', leads.length, 'leads');
   } else {
-    leads = [];
-    buyers = [...BUYER_DB];
+    leads    = [];
+    buyers   = [...BUYER_DB];
+    outreach = [];
   }
 }
 
