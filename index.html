@@ -1435,8 +1435,8 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       <div class="fgrp"><label>County</label><input type="text" id="f-county" placeholder="Lee County"></div>
       <div class="fgrp"><label>Zip</label><input type="text" id="f-zip"></div>
       <div class="fgrp"><label>Lot size (sf)</label><input type="text" id="f-lot"></div>
-      <div class="fgrp"><label>Est. value ($)</label><input type="text" id="f-val" placeholder="100000"></div>
-      <div class="fgrp"><label>Our offer ($) — blank = auto 55%</label><input type="text" id="f-offer" placeholder="Auto-calculated"></div>
+      <div class="fgrp"><label>Our offer ($) — what we pay seller</label><input type="text" id="f-offer" placeholder="e.g. 45000"></div>
+      <div class="fgrp"><label>Buyer paying ($) — sale price to buyer</label><input type="text" id="f-buyer-paying" placeholder="e.g. 65000"></div>
       <div class="fgrp"><label>Stage</label>
         <select id="f-stage"><option>New</option><option>Contacted</option><option>Offer Sent</option><option>Under Contract</option><option>Closed</option><option>Dead</option></select>
       </div>
@@ -1618,9 +1618,9 @@ const TABLE_COLS = [
   {key:'county',  label:'County'},
   {key:'zip',     label:'Zip'},
   {key:'lotSf',   label:'Lot sf'},
-  {key:'estValue',label:'Est. Value'},
-  {key:'offerAmt',label:'Offer'},
-  {key:'equity',  label:'Equity'},
+  {key:'offerAmt',    label:'Our Offer'},
+  {key:'buyerPaying', label:'Buyer Paying'},
+  {key:'equity',      label:'Equity'},
   {key:'stage',   label:'Stage'},
   {key:'score',   label:'Score'},
 ];
@@ -1840,7 +1840,7 @@ function normL(l) {
   return {
     addr:'',rawAddr:'',city:'',state:'FL',county:'',zip:'',apn:'',
     owner:'',phone:'',allPhones:[],email:'',allEmails:[],mailingAddress:'',
-    lot:'—',lotSf:0,estValue:0,price:'—',offerAmt:0,offer:'',equity:0,
+    lot:'—',lotSf:0,estValue:0,price:'—',offerAmt:0,offer:'',buyerPaying:0,equity:0,
     openLoans:0,assessed:0,lastSaleDate:'',lastSaleAmt:0,ownerOccupied:'',
     doNotMail:'',propertyType:'',stage:'New',score:'B',
     q:[1,1],flags:[],notes:'',source:'Manual',importedAt:'',readyToSend:false,
@@ -2146,13 +2146,45 @@ function setPipeFilter(state,county,el) {
 // ═══════════════════════════════════════════
 function renderPipeStats() {
   const all=leads, filt=filteredLeads();
-  const val=all.filter(l=>l.offerAmt&&l.stage!=='Dead').reduce((a,l)=>a+(l.offerAmt||0),0);
+  const active=all.filter(l=>l.stage!=='Dead');
+  const totalOffer  = active.reduce((a,l)=>a+(l.offerAmt||0),0);
+  const totalBuyer  = active.reduce((a,l)=>a+(l.buyerPaying||0),0);
+  const totalSpread = totalBuyer - totalOffer;
+  const closedLeads = all.filter(l=>l.stage==='Closed');
+  const closedRev   = closedLeads.reduce((a,l)=>a+(l.buyerPaying||0),0);
+  const fmt = n => {
+    if(!n) return '—';
+    if(n>=1000000) return '$'+(n/1000000).toFixed(2)+'M';
+    if(n>=1000)    return '$'+(n/1000).toFixed(0)+'K';
+    return '$'+n.toLocaleString();
+  };
+  const spreadColor = totalSpread>0?'green':totalSpread<0?'red':'';
   document.getElementById('pipe-stats').innerHTML=`
-    <div class="stat"><div class="stat-lbl">Total leads</div><div class="stat-val">${all.length}</div><div class="stat-sub">${filt.length} in view</div></div>
-    <div class="stat hi"><div class="stat-lbl">Qualified (A)</div><div class="stat-val gold">${all.filter(l=>l.score==='A').length}</div><div class="stat-sub">contact first</div></div>
-    <div class="stat"><div class="stat-lbl">Active</div><div class="stat-val blue">${all.filter(l=>['Contacted','Offer Sent','Under Contract'].includes(l.stage)).length}</div><div class="stat-sub">in progress</div></div>
-    <div class="stat"><div class="stat-lbl">Offer pipeline</div><div class="stat-val green">$${val.toLocaleString()}</div><div class="stat-sub">total offers</div></div>
-    <div class="stat"><div class="stat-lbl">Closed</div><div class="stat-val green">${all.filter(l=>l.stage==='Closed').length}</div><div class="stat-sub">deals done</div></div>`;
+    <div class="stat">
+      <div class="stat-lbl">Total Leads</div>
+      <div class="stat-val">${all.length}</div>
+      <div class="stat-sub">${filt.length} in view · ${all.filter(l=>l.score==='A').length} qualified</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Our Offer (Seller Price)</div>
+      <div class="stat-val green">${fmt(totalOffer)}</div>
+      <div class="stat-sub">total paid to sellers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Buyer Paying</div>
+      <div class="stat-val blue">${fmt(totalBuyer)}</div>
+      <div class="stat-sub">total buyer purchase price</div>
+    </div>
+    <div class="stat hi">
+      <div class="stat-lbl">Gross Spread</div>
+      <div class="stat-val ${spreadColor||'gold'}">${totalBuyer?fmt(Math.abs(totalSpread)):'—'}</div>
+      <div class="stat-sub">${totalSpread<0?'⚠ negative spread':'buyer paying − our offer'}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Closed Revenue</div>
+      <div class="stat-val green">${fmt(closedRev)}</div>
+      <div class="stat-sub">${closedLeads.length} deal${closedLeads.length===1?'':'s'} closed</div>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════
@@ -2170,7 +2202,7 @@ function renderKanban() {
         <div class="kcard${String(selId)===String(l.id)?' sel':''}" onclick="selLead('${l.id}')">
           <div class="kc-addr">${l.addr}</div>
           <div class="kc-meta">${l.owner||'—'}</div>
-          <div class="kc-row"><span class="kc-val">${l.price}</span><span class="kc-zip">${l.zip}</span></div>
+          <div class="kc-row"><span class="kc-val">${l.offer||'—'}</span>${l.buyerPaying?(()=>{const sp=l.buyerPaying-(l.offerAmt||0);return `<span style="font-size:11px;font-weight:700;color:${sp>=0?'var(--green)':'var(--red)'}">${sp>=0?'+':'-'}$${Math.abs(sp).toLocaleString()}</span>`;})():`<span class="kc-zip">${l.zip}</span>`}</div>
           <div class="pips">${(l.q||[]).map(v=>`<div class="pip ${v?'on':'off'}"></div>`).join('')}</div>
           <span class="sc sc-${l.score}">${l.score}</span>${l.readyToSend?'<span style="font-size:9px;background:rgba(201,168,76,0.2);color:var(--gold);padding:1px 4px;border-radius:3px;margin-left:3px">📤</span>':''}
         </div>`).join('')}
@@ -2207,8 +2239,8 @@ function renderTable() {
       <td style="color:var(--text3);font-size:11px">${l.county}</td>
       <td>${l.zip}</td>
       <td style="color:var(--text2)">${l.lot}</td>
-      <td style="color:var(--gold);font-weight:600">${l.price}</td>
       <td style="color:var(--green);font-weight:600">${l.offer||'—'}</td>
+      <td style="color:var(--blue);font-weight:600">${l.buyerPaying?'$'+Number(l.buyerPaying).toLocaleString():'—'}</td>
       <td style="color:var(--text2)">${l.equity?'$'+Number(l.equity).toLocaleString():'—'}</td>
       <td><span class="sp sp-${sk}">${l.stage}</span></td>
       <td><span class="sc sc-${l.score}">${l.score}</span></td>
@@ -2231,6 +2263,10 @@ function renderDetail() {
   if(!l){wrap.innerHTML='';return;}
   const phones=(l.allPhones&&l.allPhones.length?l.allPhones:l.phone?[l.phone]:[]).filter(Boolean)
     .map((p,i)=>`<div style="font-size:12px">${p}${i===0?' <span style="font-size:10px;color:var(--text3)">primary</span>':''}</div>`).join('')||'—';
+  const spread=(l.buyerPaying||0)-(l.offerAmt||0);
+  const spreadHtml=(l.buyerPaying&&l.offerAmt)
+    ?`<span style="font-size:15px;font-weight:700;color:${spread>=0?'var(--green)':'var(--red)'}">${spread>=0?'+':'-'}$${Math.abs(spread).toLocaleString()}${spread<0?' ⚠':''}</span>`
+    :'<span style="color:var(--text3);font-size:12px">Enter buyer price to calculate</span>';
   // ═══ FIX 5: recheckLead('id') replaces the inline runApiChecks(...).then(...) mess ═══
   wrap.innerHTML=`<div class="detail">
     <div class="dp-hd">
@@ -2246,8 +2282,18 @@ function renderDetail() {
       </div>
     </div>
     <div class="dp-grid">
-      <div class="dp-f"><label>Est. value</label><span style="color:var(--gold)">${l.price}</span></div>
-      <div class="dp-f"><label>Our offer (55%)</label><span style="color:var(--green)">${l.offer||'—'}</span></div>
+      <div class="dp-f">
+        <label>Our Offer (Seller Price)</label>
+        <span style="color:var(--green);font-size:15px;font-weight:700">${l.offer||'—'}</span>
+      </div>
+      <div class="dp-f">
+        <label>Buyer Paying</label>
+        <span style="color:var(--blue);font-size:15px;font-weight:700">${l.buyerPaying?'$'+Number(l.buyerPaying).toLocaleString():'—'}</span>
+      </div>
+      <div class="dp-f" style="background:rgba(184,149,42,0.05);border-radius:var(--rs);padding:8px 10px;border:1px solid rgba(184,149,42,0.18)">
+        <label style="color:var(--gold)">Spread — What We Make</label>
+        ${spreadHtml}
+      </div>
       <div class="dp-f"><label>Est. equity</label><span>${l.equity?'$'+Number(l.equity).toLocaleString():'—'}</span></div>
       <div class="dp-f"><label>Lot size</label><span>${l.lot} sf</span></div>
       <div class="dp-f"><label>Open loans</label><span>${l.openLoans||'0'}</span></div>
@@ -2351,8 +2397,8 @@ function openLeadModal(id){
   set('f-state',l?.state||'FL');set('f-county',l?.county);set('f-zip',l?.zip);
   set('f-lot',l?.lot==='—'?'':l?.lot);
   // Show numeric values in fields, not the formatted strings
-  set('f-val',l?.estValue||'');
   set('f-offer',l?.offerAmt||'');
+  set('f-buyer-paying',l?.buyerPaying||'');
   set('f-stage',l?.stage||'New');set('f-score',l?.score||'B');set('f-notes',l?.notes);
   QUAL_LABELS.forEach((_,i)=>{const e=document.getElementById('q'+i);if(e)e.checked=l?!!(l.q||[])[i]:false;});
   document.getElementById('listing-url').value='';
@@ -2516,12 +2562,12 @@ function fillLeadFromParsed(p){
   set('f-state',p.state);
   set('f-zip',p.zip);
   set('f-county',p.county);
-  if(p.price) set('f-val',p.price);
+  if(p.price) set('f-buyer-paying',p.price);
   if(p.lotSf) set('f-lot',p.lotSf);
 }
 
 function countFilledFields(){
-  return ['f-addr','f-state','f-zip','f-county','f-val','f-lot']
+  return ['f-addr','f-state','f-zip','f-county','f-lot','f-buyer-paying']
     .filter(id=>{const e=document.getElementById(id);return e&&e.value.trim();}).length;
 }
 
@@ -2532,11 +2578,10 @@ function saveLead(){
   const addr=(document.getElementById('f-addr').value||'').trim();
   if(!addr){alert('Address required');return;}
 
-  const estValue  = parseFloat((document.getElementById('f-val').value||'').replace(/[$,]/g,''))   || 0;
   const offerRaw  = parseFloat((document.getElementById('f-offer').value||'').replace(/[$,]/g,'')) || 0;
-  const offerAmt  = offerRaw || (estValue ? Math.round(estValue * 0.55) : 0);
-  const price     = estValue  ? '$' + estValue.toLocaleString()  : '—';
-  const offer     = offerAmt  ? '$' + offerAmt.toLocaleString()  : '';
+  const offerAmt  = offerRaw;
+  const offer     = offerAmt  ? '$' + offerAmt.toLocaleString()  : '—';
+  const buyerPaying = parseFloat((document.getElementById('f-buyer-paying').value||'').replace(/[$,]/g,'')) || 0;
   const lotRaw    = (document.getElementById('f-lot').value||'').trim();
   const lotSf     = parseFloat(lotRaw.replace(/,/g,'')) || 0;
 
@@ -2549,7 +2594,7 @@ function saveLead(){
     county:(document.getElementById('f-county').value||'').trim(),
     zip:(document.getElementById('f-zip').value||'').trim(),
     lot:lotSf ? lotSf.toLocaleString() : (lotRaw||'—'),
-    lotSf, estValue, price, offerAmt, offer,
+    lotSf, offerAmt, offer, buyerPaying,
     stage:document.getElementById('f-stage').value,
     score:document.getElementById('f-score').value,
     q: QUAL_LABELS.map((_, i) => document.getElementById('q' + i)?.checked ? 1 : 0),
@@ -2888,8 +2933,11 @@ function loadBackup() {
 // ═══════════════════════════════════════════
 function exportCSV() {
   if(currentPage==='pipeline'){
-    const rows=[['Address','Owner','Phone','Email','State','County','Zip','Lot sf','Est Value','Offer','Equity','Stage','Score','APN','Notes']];
-    leads.forEach(l=>rows.push([l.addr,l.owner,l.phone,l.email,l.state,l.county,l.zip,l.lot,l.price,l.offer,l.equity||'',l.stage,l.score,l.apn||'',l.notes]));
+    const rows=[['Address','Owner','Phone','Email','State','County','Zip','Lot sf','Our Offer','Buyer Paying','Spread','Equity','Stage','Score','APN','Notes']];
+    leads.forEach(l=>{
+      const sp=(l.buyerPaying||0)-(l.offerAmt||0);
+      rows.push([l.addr,l.owner,l.phone,l.email,l.state,l.county,l.zip,l.lot,l.offer||'',l.buyerPaying?'$'+Number(l.buyerPaying).toLocaleString():'',l.buyerPaying&&l.offerAmt?'$'+sp.toLocaleString():'',l.equity||'',l.stage,l.score,l.apn||'',l.notes]);
+    });
     const a=document.createElement('a');
     a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n'));
     a.download='fuchsmonte_leads_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('Leads exported',true);
@@ -3110,7 +3158,7 @@ function renderReadyLots() {
       <div class="ol-meta">${[l.county,l.state,l.zip].filter(Boolean).join(' · ')}</div>
       <div style="display:flex;gap:5px;margin-top:4px;align-items:center">
         <span class="sc sc-${l.score}">${l.score}</span>
-        <span style="font-size:10px;color:var(--text3)">${l.price}</span>
+        <span style="font-size:10px;color:var(--text3)">${l.offer||'—'}</span>
         ${sent?`<span style="font-size:10px;color:var(--blue);margin-left:auto">${sent} sent ✓</span>`:''}
       </div>
     </div>`;
