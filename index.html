@@ -2147,11 +2147,12 @@ function setPipeFilter(state,county,el) {
 function renderPipeStats() {
   const all=leads, filt=filteredLeads();
   const active=all.filter(l=>l.stage!=='Dead');
-  const totalOffer  = active.reduce((a,l)=>a+(l.offerAmt||0),0);
+  const offerSentLeads = all.filter(l=>l.stage==='Offer Sent');
+  const totalOffer  = offerSentLeads.reduce((a,l)=>a+(l.offerAmt||0),0);
   const totalBuyer  = active.reduce((a,l)=>a+(l.buyerPaying||0),0);
   const totalSpread = totalBuyer - totalOffer;
   const closedLeads = all.filter(l=>l.stage==='Closed');
-  const closedRev   = closedLeads.reduce((a,l)=>a+(l.buyerPaying||0),0);
+  const closedRev   = closedLeads.reduce((a,l)=>a+Math.max(0,(l.buyerPaying||0)-(l.offerAmt||0)),0);
   const fmt = n => {
     if(!n) return '—';
     if(n>=1000000) return '$'+(n/1000000).toFixed(2)+'M';
@@ -2166,9 +2167,9 @@ function renderPipeStats() {
       <div class="stat-sub">${filt.length} in view · ${all.filter(l=>l.score==='A').length} qualified</div>
     </div>
     <div class="stat">
-      <div class="stat-lbl">Our Offer (Seller Price)</div>
+      <div class="stat-lbl">Our Offer (Offer Sent)</div>
       <div class="stat-val green">${fmt(totalOffer)}</div>
-      <div class="stat-sub">total paid to sellers</div>
+      <div class="stat-sub">${offerSentLeads.length} offer${offerSentLeads.length===1?'':'s'} sent to sellers</div>
     </div>
     <div class="stat">
       <div class="stat-lbl">Buyer Paying</div>
@@ -2183,7 +2184,7 @@ function renderPipeStats() {
     <div class="stat">
       <div class="stat-lbl">Closed Revenue</div>
       <div class="stat-val green">${fmt(closedRev)}</div>
-      <div class="stat-sub">${closedLeads.length} deal${closedLeads.length===1?'':'s'} closed</div>
+      <div class="stat-sub">gross spread · ${closedLeads.length} deal${closedLeads.length===1?'':'s'} closed</div>
     </div>`;
 }
 
