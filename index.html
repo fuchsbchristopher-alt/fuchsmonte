@@ -1339,47 +1339,7 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
       <div class="ph">
         <div>
           <div class="ph-title">⚙ <span>Settings</span></div>
-          <div class="ph-sub">Manage users and access — admin only</div>
-        </div>
-      </div>
-
-      <!-- User list -->
-      <div class="settings-section">
-        <div class="settings-section-title">User Management</div>
-        <div class="settings-section-sub">All users who can log in to the Fuchsmonte Land Management Suite</div>
-        <div id="users-sync-status" style="font-size:11px;margin:6px 0 12px;font-weight:600"></div>
-        <div class="user-table-wrap">
-          <div class="user-row user-row-hd">
-            <div class="ur-name">Name</div>
-            <div class="ur-user">Username</div>
-            <div class="ur-role">Role</div>
-            <div class="ur-act">Actions</div>
-          </div>
-          <div id="user-list-rows">
-            <div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Loading users…</div>
-          </div>
-        </div>
-
-        <!-- Add user form -->
-        <div class="settings-section-title" style="margin-bottom:8px">Add New User</div>
-        <div class="add-user-grid">
-          <div class="aui-field"><label>Full name</label><input type="text" id="nu-name" placeholder="John Smith"></div>
-          <div class="aui-field"><label>Username</label><input type="text" id="nu-user" placeholder="christopher"></div>
-          <div class="aui-field"><label>Password</label><input type="password" id="nu-pass" placeholder="Min 6 characters"></div>
-          <div class="aui-field"><label>Role</label><select id="nu-role"><option value="user">User</option><option value="admin">Admin</option></select></div>
-        </div>
-        <button class="btn btn-gold" style="margin-top:10px" onclick="addNewUser()">+ Add User</button>
-      </div>
-
-      <!-- Change password section -->
-      <div class="settings-section">
-        <div class="settings-section-title">Change Password</div>
-        <div class="settings-section-sub">Select a user and set a new password</div>
-        <div class="add-user-grid" style="grid-template-columns:1fr 1fr 1fr auto">
-          <div class="aui-field"><label>User</label><select id="cp-user" id="cp-user"><option value="">Select user…</option></select></div>
-          <div class="aui-field"><label>New password</label><input type="password" id="cp-pass" placeholder="New password"></div>
-          <div class="aui-field"><label>Confirm password</label><input type="password" id="cp-pass2" placeholder="Repeat password"></div>
-          <div class="aui-field"><label>&nbsp;</label><button class="btn btn-gold" onclick="doChangePassword()">Update</button></div>
+          <div class="ph-sub">App settings</div>
         </div>
       </div>
 
@@ -3454,68 +3414,18 @@ function submitPropertyForm() {
 // AUTH SYSTEM
 // ═══════════════════════════════════════════
 let currentUser  = null;
-let appUsers     = [];
+
+// ── Single shared login — hardcoded directly in this file ──
+// Because this lives in the file itself (not a database), every device that opens
+// this HTML sees the exact same credentials. Nothing to sync, nothing to go out of
+// date between devices. To change the password, edit APP_PASSWORD_HASH below
+// (or just ask Claude to update it and re-save the file).
+const APP_USERNAME      = 'Fuchsmonte';
+const APP_PASSWORD_HASH = 'c72b7c8431ea40844e4e167020902b82ab028de02de3f1b55640fd882bb635aa'; // sha256 hash of the current password — ask Claude to change it
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-// ── Tracks whether the last load/save of app users actually reached Supabase ──
-let usersCloudOk = true;
-
-// ── Load users from Supabase (falls back to localStorage) ──
-async function loadAppUsers() {
-  try {
-    const r = await fetch(SUPABASE_URL+'/rest/v1/fm_data?id=eq.fm_users&select=*', {
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
-    });
-    if (r.ok) {
-      usersCloudOk = true;
-      const rows = await r.json();
-      if (rows && rows[0] && rows[0].users) { appUsers=rows[0].users; return; }
-      // request succeeded, just no row saved yet — fall through
-    } else {
-      usersCloudOk = false;
-      const errTxt = await r.text().catch(()=>'');
-      console.warn('[FuchsMonte] loadAppUsers: Supabase rejected the request ('+r.status+'): '+errTxt);
-    }
-  } catch(e) {
-    usersCloudOk = false;
-    console.warn('[FuchsMonte] loadAppUsers: network error —', e.message);
-  }
-  try { const raw=localStorage.getItem('fm_users'); if(raw) { appUsers=JSON.parse(raw); return; } } catch(e){}
-  appUsers = [];
-}
-
-async function saveAppUsers() {
-  let ok = false, errDetail = '';
-  try {
-    const resp = await fetch(SUPABASE_URL+'/rest/v1/fm_data', {
-      method:'POST',
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({id:'fm_users',users:appUsers,updated_at:new Date().toISOString()})
-    });
-    ok = resp.ok;
-    if (!ok) errDetail = await resp.text().catch(()=>('HTTP '+resp.status));
-  } catch(e) { errDetail = e.message; }
-  usersCloudOk = ok;
-  if (!ok) console.warn('[FuchsMonte] saveAppUsers: CLOUD SYNC FAILED — this user/password change will NOT appear on other devices. Server said:', errDetail);
-  try { localStorage.setItem('fm_users',JSON.stringify(appUsers)); } catch(e){}
-  return ok;
-}
-
-// ── Ensure at least one default admin exists ──
-async function ensureDefaultAdmin() {
-  if (appUsers.length === 0) {
-    const hash = await sha256('Fuchsmonte1');
-    appUsers = [{
-      id:'U_default',username:'christopher',passwordHash:hash,
-      role:'admin',name:'Christopher Fuchs',createdAt:new Date().toISOString()
-    }];
-    const ok = await saveAppUsers();
-    if (!ok) console.warn('[FuchsMonte] Default admin could NOT be saved to the cloud — it only exists on this device until the fm_data table is fixed (see saveAppUsers warning above for the exact server error).');
-  }
 }
 
 // ── Login ──
@@ -3525,12 +3435,14 @@ async function doLogin() {
   const errEl    = document.getElementById('login-err');
   if (!username||!password) { errEl.textContent='Please enter username and password.'; return; }
   errEl.textContent = 'Signing in…';
-  await loadAppUsers();
   const hash = await sha256(password);
-  const user = appUsers.find(u=>u.username.toLowerCase()===username.toLowerCase()&&u.passwordHash===hash);
-  if (!user) { errEl.textContent='Incorrect username or password.'; document.getElementById('login-pass').value=''; return; }
-  currentUser = user;
-  sessionStorage.setItem('fm_session',JSON.stringify({id:user.id,username:user.username,role:user.role,name:user.name}));
+  if (username.toLowerCase()!==APP_USERNAME.toLowerCase() || hash!==APP_PASSWORD_HASH) {
+    errEl.textContent='Incorrect username or password.';
+    document.getElementById('login-pass').value='';
+    return;
+  }
+  currentUser = { username:APP_USERNAME, name:'Christopher Fuchs', role:'admin' };
+  sessionStorage.setItem('fm_session',JSON.stringify(currentUser));
   errEl.textContent='';
   document.getElementById('login-screen').style.display='none';
   showMainMenu();
@@ -3616,55 +3528,6 @@ function applyRoleUI() {
   if (topbarUser) topbarUser.textContent = currentUser?.name || currentUser?.username || '';
 }
 
-// ── User Management ──
-async function addNewUser() {
-  const name  = (document.getElementById('nu-name').value||'').trim();
-  const uname = (document.getElementById('nu-user').value||'').trim();
-  const pass  = (document.getElementById('nu-pass').value||'').trim();
-  const role  = document.getElementById('nu-role').value;
-  if (!uname||!pass) { toast('Username and password required'); return; }
-  if (pass.length<6) { toast('Password must be at least 6 characters'); return; }
-  if (appUsers.find(u=>u.username.toLowerCase()===uname.toLowerCase())) { toast('Username already exists'); return; }
-  const hash = await sha256(pass);
-  appUsers.push({id:'U'+Date.now(),username:uname,passwordHash:hash,role,name:name||uname,createdAt:new Date().toISOString()});
-  const ok = await saveAppUsers();
-  document.getElementById('nu-name').value='';
-  document.getElementById('nu-user').value='';
-  document.getElementById('nu-pass').value='';
-  toast(ok ? 'User '+uname+' added — synced to cloud ✓' : '⚠ Saved on this device only — cloud sync failed, won\'t work elsewhere yet', ok);
-  renderSettingsPage();
-}
-
-async function removeUser(userId) {
-  if (userId===currentUser?.id) { toast('Cannot remove your own account'); return; }
-  const user = appUsers.find(u=>u.id===userId);
-  if (!user) return;
-  if (!confirm('Remove user "'+user.username+'"? This cannot be undone.')) return;
-  appUsers = appUsers.filter(u=>u.id!==userId);
-  const ok = await saveAppUsers();
-  toast(ok ? 'User removed' : '⚠ Removed on this device only — cloud sync failed', ok);
-  renderSettingsPage();
-}
-
-async function doChangePassword() {
-  const uid   = document.getElementById('cp-user').value;
-  const pass  = document.getElementById('cp-pass').value;
-  const pass2 = document.getElementById('cp-pass2').value;
-  if (!uid)            { toast('Select a user first'); return; }
-  if (!pass)           { toast('Enter a new password'); return; }
-  if (pass.length < 6) { toast('Password must be at least 6 characters'); return; }
-  if (pass!==pass2)    { toast('Passwords do not match'); return; }
-  const hash = await sha256(pass);
-  const user = appUsers.find(u=>u.id===uid);
-  if (user) {
-    user.passwordHash=hash;
-    const ok = await saveAppUsers();
-    toast(ok ? 'Password updated for '+user.username+' — synced to cloud ✓' : '⚠ Changed on this device only — cloud sync failed, won\'t work elsewhere yet', ok);
-  }
-  document.getElementById('cp-pass').value='';
-  document.getElementById('cp-pass2').value='';
-}
-
 async function restoreAllBuyers() {
   if (!confirm('Restore all ' + deletedBuyerIds.length + ' deleted buyer(s)? They will reappear in the Buyer CRM.')) return;
   deletedBuyerIds = [];
@@ -3675,30 +3538,6 @@ async function restoreAllBuyers() {
 }
 
 function renderSettingsPage() {
-  // Cloud sync status — makes the silent-failure mode visible
-  const syncEl = document.getElementById('users-sync-status');
-  if (syncEl) {
-    syncEl.innerHTML = usersCloudOk
-      ? '<span style="color:var(--green)">☁ Synced — this list is the same on every device</span>'
-      : '<span style="color:var(--red)">⚠ Not synced to the cloud — users/passwords added here only work on THIS device until this is fixed. Open browser console for the exact error.</span>';
-  }
-  // User list
-  const rows = document.getElementById('user-list-rows');
-  if (rows) {
-    if (!appUsers.length) {
-      rows.innerHTML='<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">No users found.</div>';
-    } else {
-      rows.innerHTML = appUsers.map(u => `
-        <div class="user-row">
-          <div class="ur-name" style="font-weight:600">${u.name||u.username} ${u.id===currentUser?.id?'<span style="font-size:10px;color:var(--gold)">(you)</span>':''}</div>
-          <div class="ur-user" style="color:var(--text2)">${u.username}</div>
-          <div class="ur-role"><span class="role-badge ${u.role==='admin'?'rb-admin':'rb-user'}">${u.role}</span></div>
-          <div class="ur-act">
-            ${u.id!==currentUser?.id?`<button class="btn btn-sm btn-red" onclick="removeUser('${u.id}')">Remove</button>`:''}
-          </div>
-        </div>`).join('');
-    }
-  }
   // Show/hide restore section
   const restoreSection = document.getElementById('restore-buyers-section');
   const restoreSub     = document.getElementById('restore-buyers-sub');
@@ -3709,10 +3548,6 @@ function renderSettingsPage() {
     } else {
       restoreSection.style.display = 'none';
     }
-  }
-  const cpSel = document.getElementById('cp-user');
-  if (cpSel) {
-    cpSel.innerHTML='<option value="">Select user…</option>'+appUsers.map(u=>`<option value="${u.id}">${u.name||u.username} (${u.username})</option>`).join('');
   }
 }
 
@@ -4062,10 +3897,6 @@ async function deleteBMFile(id) {
   document.getElementById('main-menu').style.display    = 'none';
   document.querySelector('.topbar').style.display       = 'none';
   document.querySelector('.app').style.display          = 'none';
-
-  // ── Load users + ensure default admin ──
-  await loadAppUsers();
-  await ensureDefaultAdmin();
 
   // ── If session already exists, update nav button to skip login ──
   if (checkSession()) {
