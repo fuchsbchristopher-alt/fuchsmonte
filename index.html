@@ -755,7 +755,16 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
   .pform-wrap{padding:28px 20px}
 }
 
-/* ═══ ROADMAP (fm-roadmap) — aliases dashboard's own palette, scoped locally so it never touches :root ═══ */
+/* ═══ OUTREACH TAB SWITCHER ═══ */
+.outreach-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.outreach-tab{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:10px 20px;border:none;border-bottom:2px solid transparent;background:none;cursor:pointer;color:var(--text3);margin-bottom:-1px;transition:color .15s,border-color .15s;}
+.outreach-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.outreach-tab:hover:not(.active){color:var(--text);}
+/* Buy box compose reuses existing .compose-split / .buyers-col / .email-col but we need a selected buyer pill */
+.bb-sel-pill{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.bb-sel-pill:last-child{border-bottom:none;}
+
+ — aliases dashboard's own palette, scoped locally so it never touches :root ═══ */
 .fm-roadmap,.fm-overlay{
   --cream:var(--bg);
   --paper:var(--bg3);
@@ -1463,66 +1472,113 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
 
       <div class="stats" id="outreach-stats" style="grid-template-columns:repeat(5,1fr)"></div>
 
-      <div class="outreach-layout">
-        <!-- Left: ready lots list -->
-        <div class="ol-panel">
-          <div class="ol-hd">
-            <span>Ready to Send</span>
-            <span id="nb-ready-hd" style="color:var(--text3);font-weight:400">0 lots</span>
+      <!-- ── Outreach tab switcher ── -->
+      <div class="outreach-tabs">
+        <button class="outreach-tab active" id="ot-land"   onclick="switchOutreachTab('land')">🏗 Land Emails</button>
+        <button class="outreach-tab"        id="ot-buybox" onclick="switchOutreachTab('buybox')">📋 Buy Box Acquire</button>
+      </div>
+
+      <!-- ── LAND EMAILS (existing) ── -->
+      <div id="outreach-land-section">
+        <div class="outreach-layout">
+          <!-- Left: ready lots list -->
+          <div class="ol-panel">
+            <div class="ol-hd">
+              <span>Ready to Send</span>
+              <span id="nb-ready-hd" style="color:var(--text3);font-weight:400">0 lots</span>
+            </div>
+            <div class="ol-list" id="outreach-lots">
+              <div style="padding:20px;text-align:center;color:var(--text3);font-size:11px">
+                No lots marked yet.<br>
+                In the Pipeline, click a lead then hit<br>
+                <strong style="color:var(--gold)">📤 Ready to Send</strong> in the action bar.
+              </div>
+            </div>
           </div>
-          <div class="ol-list" id="outreach-lots">
-            <div style="padding:20px;text-align:center;color:var(--text3);font-size:11px">
-              No lots marked yet.<br>
-              In the Pipeline, click a lead then hit<br>
-              <strong style="color:var(--gold)">📤 Ready to Send</strong> in the action bar.
+
+          <!-- Right: compose + matched buyers -->
+          <div class="compose-panel" id="outreach-compose">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">
+              ← Select a lot from the list to see matched builders &amp; buyers and compose an email
             </div>
           </div>
         </div>
 
-        <!-- Right: compose + matched buyers -->
-        <div class="compose-panel" id="outreach-compose">
-          <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">
-            ← Select a lot from the list to see matched builders &amp; buyers and compose an email
+        <!-- Tracker table -->
+        <div class="tracker-wrap" id="outreach-tracker-section">
+          <div class="ph" style="margin-bottom:8px">
+            <div class="tracker-title" style="font-size:14px;font-weight:700;color:var(--text)">Outreach <span style="color:var(--gold)">Tracker</span></div>
+            <div id="tracker-filters" style="display:flex;gap:6px">
+              <select class="fi" id="tracker-filter-status" onchange="renderOutreachTracker()" style="font-size:11px">
+                <option value="">All statuses</option>
+                <option value="sent">Sent</option>
+                <option value="drafted">Drafted</option>
+              </select>
+              <select class="fi" id="tracker-filter-fu" onchange="renderOutreachTracker()" style="font-size:11px">
+                <option value="">All follow-ups</option>
+                <option value="interested">Interested</option>
+                <option value="not_interested">Not Interested</option>
+                <option value="no_response">No Response</option>
+                <option value="due">Due today</option>
+              </select>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>Lot address</th>
+                <th>Builder / buyer</th>
+                <th>Date sent</th>
+                <th>Status</th>
+                <th>Response</th>
+                <th>Next follow-up</th>
+                <th>Notes</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="outreach-tbody"></tbody>
+            </table>
           </div>
         </div>
-      </div>
+      </div><!-- /outreach-land-section -->
 
-      <!-- Tracker table -->
-      <div class="tracker-wrap" id="outreach-tracker-section">
-        <div class="ph" style="margin-bottom:8px">
-          <div class="tracker-title" style="font-size:14px;font-weight:700;color:var(--text)">Outreach <span style="color:var(--gold)">Tracker</span></div>
-          <div id="tracker-filters" style="display:flex;gap:6px">
-            <select class="fi" id="tracker-filter-status" onchange="renderOutreachTracker()" style="font-size:11px">
-              <option value="">All statuses</option>
-              <option value="sent">Sent</option>
-              <option value="drafted">Drafted</option>
-            </select>
-            <select class="fi" id="tracker-filter-fu" onchange="renderOutreachTracker()" style="font-size:11px">
-              <option value="">All follow-ups</option>
-              <option value="interested">Interested</option>
-              <option value="not_interested">Not Interested</option>
-              <option value="no_response">No Response</option>
-              <option value="due">Due today</option>
-            </select>
+      <!-- ── BUY BOX ACQUIRE (new) ── -->
+      <div id="outreach-buybox-section" style="display:none">
+
+        <div class="outreach-layout" style="grid-template-columns:280px 1fr;min-height:520px">
+
+          <!-- Left: filter + buyer list -->
+          <div class="ol-panel">
+            <div class="ol-hd">
+              <span>Select Buyers</span>
+              <span id="bb-buyer-hd" style="color:var(--text3);font-weight:400">0 buyers</span>
+            </div>
+            <!-- Area filters -->
+            <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;background:var(--bg3)">
+              <select class="fi" id="bb-state-filter" onchange="renderBBBuyerList()" style="width:100%;font-size:11px">
+                <option value="">All states</option>
+              </select>
+              <select class="fi" id="bb-county-filter" onchange="renderBBBuyerList()" style="width:100%;font-size:11px">
+                <option value="">All counties</option>
+              </select>
+            </div>
+            <div class="ol-list" id="bb-buyer-list" style="flex:1;overflow-y:auto">
+              <div style="padding:20px;text-align:center;color:var(--text3);font-size:11px">
+                Loading buyers…
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>
-              <th>Lot address</th>
-              <th>Builder / buyer</th>
-              <th>Date sent</th>
-              <th>Status</th>
-              <th>Response</th>
-              <th>Next follow-up</th>
-              <th>Notes</th>
-              <th></th>
-            </tr></thead>
-            <tbody id="outreach-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+
+          <!-- Right: compose panel -->
+          <div class="compose-panel" id="bb-compose">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">
+              Select buyers from the list, then review and send buy box request emails
+            </div>
+          </div>
+
+        </div><!-- /outreach-layout -->
+      </div><!-- /outreach-buybox-section -->
+
+    </div><!-- /page-outreach -->
 
     <!-- ═══ SETTINGS PAGE ═══ -->
     <div class="page" id="page-settings">
@@ -1738,6 +1794,24 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
     <div id="send-modal-body" style="max-height:55vh;overflow-y:auto"></div>
     <div class="modal-ft">
       <button class="btn" onclick="closeSendModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUY BOX ACQUIRE SEND MODAL -->
+<div class="modal-bg" id="bb-acq-send-modal">
+  <div class="modal" style="width:640px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">📋 Send Buy Box Requests</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="bb-acq-modal-sub"></div>
+      </div>
+      <button class="modal-x" onclick="closeBBSendModal()">×</button>
+    </div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Click <strong>Open in Gmail</strong> to send a personalised buy box request to each buyer. Each email is pre-filled and ready to send.</p>
+    <div id="bb-acq-modal-body" style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px"></div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeBBSendModal()">Close</button>
     </div>
   </div>
 </div>
@@ -3611,6 +3685,295 @@ function saveMyInfo() {
   saveMyInfoToStorage(); closeMyInfoModal();
   toast('Contact info saved — emails will use your signature',true);
   if (selOutreachLot) renderBuyerMatchPanel();
+}
+
+// ════════════════════════════════════════════
+// BUY BOX ACQUISITION OUTREACH
+// ════════════════════════════════════════════
+let selBBBuyers = new Set();
+let currentOutreachTab = 'land';
+
+function switchOutreachTab(tab) {
+  currentOutreachTab = tab;
+  document.getElementById('outreach-land-section').style.display   = tab==='land'   ? 'block' : 'none';
+  document.getElementById('outreach-buybox-section').style.display = tab==='buybox' ? 'block' : 'none';
+  document.getElementById('ot-land').classList.toggle('active',   tab==='land');
+  document.getElementById('ot-buybox').classList.toggle('active', tab==='buybox');
+  if (tab==='buybox') { selBBBuyers = new Set(); renderBBPage(); }
+}
+
+function renderBBPage() {
+  // Populate state filter from real buyer data
+  const states = [...new Set(buyers.map(b=>b.state).filter(Boolean))].sort();
+  const stateEl = document.getElementById('bb-state-filter');
+  if (stateEl) {
+    const cur = stateEl.value;
+    stateEl.innerHTML = '<option value="">All states</option>' +
+      states.map(s=>`<option value="${s}"${s===cur?' selected':''}>${s}</option>`).join('');
+  }
+  renderBBBuyerList();
+}
+
+function renderBBBuyerList() {
+  const stateEl  = document.getElementById('bb-state-filter');
+  const countyEl = document.getElementById('bb-county-filter');
+  const selState  = stateEl?.value  || '';
+
+  // Rebuild county dropdown to match the selected state
+  const allCounties = [...new Set(
+    buyers.filter(b=>!selState||b.state===selState).flatMap(b=>b.counties||[]).filter(Boolean)
+  )].sort();
+  if (countyEl) {
+    const curCounty = countyEl.value;
+    countyEl.innerHTML = '<option value="">All counties</option>' +
+      allCounties.map(c=>`<option value="${c}"${c===curCounty?' selected':''}>${c}</option>`).join('');
+  }
+  const selCounty = countyEl?.value || '';
+
+  const filtered = buyers.filter(b => {
+    if (selState  && b.state !== selState)                               return false;
+    if (selCounty && !(b.counties||[]).includes(selCounty))              return false;
+    return true;
+  });
+
+  const listEl = document.getElementById('bb-buyer-list');
+  const hdEl   = document.getElementById('bb-buyer-hd');
+  if (hdEl) hdEl.textContent = filtered.length + ' buyer' + (filtered.length===1?'':'s');
+  if (!listEl) return;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="padding:22px;text-align:center;color:var(--text3);font-size:11px;line-height:1.7">No buyers match this filter.<br><span style="font-size:10px">Add buyers in the Buyer CRM with state/county set.</span></div>';
+    renderBBCompose([]);
+    return;
+  }
+
+  listEl.innerHTML =
+    `<div style="padding:7px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text3);background:var(--bg3)">
+       <span>${filtered.length} shown</span>
+       <span style="display:flex;gap:12px">
+         <span style="cursor:pointer;color:var(--gold);font-weight:600" onclick="selectAllBBBuyers()">Select All</span>
+         <span style="cursor:pointer" onclick="clearBBBuyers()">Clear</span>
+       </span>
+     </div>` +
+    filtered.map(b => {
+      const aClass = b.activity==='hot'?'ab-hot':b.activity==='active'?'ab-active':'ab-watch';
+      const aLabel = b.activity==='hot'?'Hot':b.activity==='active'?'Active':'Watch';
+      return `<label class="bm-row" style="padding:8px 12px;display:flex;align-items:flex-start;gap:8px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.05)">
+        <input type="checkbox" ${selBBBuyers.has(String(b.id))?'checked':''} onchange="toggleBBBuyerSel('${b.id}',this.checked)" style="margin-top:3px;accent-color:var(--gold);flex-shrink:0">
+        <div style="min-width:0;flex:1">
+          <div class="bm-name">${b.name}</div>
+          <div class="bm-sub">
+            <span class="ab ${aClass}">${aLabel}</span>
+            ${b.state?`<span style="font-size:9px;color:var(--text3);margin-left:4px">${b.state}</span>`:''}
+            ${b.email?'':'<span style="color:var(--red);font-size:9px;margin-left:4px">No email</span>'}
+          </div>
+          ${b.zips?`<div style="font-size:9px;color:var(--text3);margin-top:2px">Zips: ${b.zips}</div>`:''}
+        </div>
+      </label>`;
+    }).join('');
+
+  renderBBCompose(filtered);
+}
+
+function toggleBBBuyerSel(id, checked) {
+  checked ? selBBBuyers.add(String(id)) : selBBBuyers.delete(String(id));
+  const stateEl   = document.getElementById('bb-state-filter');
+  const countyEl  = document.getElementById('bb-county-filter');
+  const selState  = stateEl?.value  || '';
+  const selCounty = countyEl?.value || '';
+  const filtered  = buyers.filter(b => {
+    if (selState  && b.state !== selState)              return false;
+    if (selCounty && !(b.counties||[]).includes(selCounty)) return false;
+    return true;
+  });
+  renderBBCompose(filtered);
+}
+
+function selectAllBBBuyers() {
+  const stateEl   = document.getElementById('bb-state-filter');
+  const countyEl  = document.getElementById('bb-county-filter');
+  const selState  = stateEl?.value  || '';
+  const selCounty = countyEl?.value || '';
+  buyers.filter(b => {
+    if (selState  && b.state !== selState)              return false;
+    if (selCounty && !(b.counties||[]).includes(selCounty)) return false;
+    return true;
+  }).forEach(b => selBBBuyers.add(String(b.id)));
+  renderBBBuyerList();
+}
+
+function clearBBBuyers() { selBBBuyers = new Set(); renderBBBuyerList(); }
+
+function renderBBCompose(filteredBuyers) {
+  const panel = document.getElementById('bb-compose');
+  if (!panel) return;
+  const n = selBBBuyers.size;
+
+  if (!filteredBuyers.length && n===0) {
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">Select buyers from the list to preview and send buy box request emails</div>';
+    return;
+  }
+
+  const previewBuyer = buyers.find(b=>selBBBuyers.has(String(b.id))) || filteredBuyers[0] || null;
+  if (!previewBuyer) {
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:380px;color:var(--text3);font-size:12px;padding:20px;text-align:center">Select at least one buyer to preview the email</div>';
+    return;
+  }
+
+  const subject = generateBBSubject();
+  const body    = generateBBBody(previewBuyer);
+
+  panel.innerHTML = `
+    <div class="compose-split" style="flex:1;overflow:hidden">
+      <div class="buyers-col">
+        <div class="bcol-hd">Selected (${n})
+          <span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="clearBBBuyers()">Clear</span>
+        </div>
+        ${n===0
+          ? '<div style="color:var(--text3);font-size:11px;padding:4px 0;line-height:1.6">No buyers selected yet.<br><span style="font-size:10px">Check buyers on the left.</span></div>'
+          : buyers.filter(b=>selBBBuyers.has(String(b.id))).map(b=>`
+              <div class="bb-sel-pill">
+                <span style="font-weight:500;font-size:11px">${b.name}</span>
+                ${b.email?'<span style="font-size:9px;color:var(--green)">✓ email</span>':'<span style="font-size:9px;color:var(--red)">no email</span>'}
+              </div>`).join('')
+        }
+      </div>
+      <div class="email-col">
+        <div class="bcol-hd">Email preview — Buy Box Request <span id="bb-sel-count" style="font-weight:400;color:var(--text3)">${n} selected</span></div>
+        <input class="email-subj-inp" id="bb-email-subject" value="${escHtml(subject)}" placeholder="Subject…">
+        <textarea class="email-body-inp" id="bb-email-body">${escHtml(body)}</textarea>
+        <div style="font-size:10px;color:var(--text3)">Personalises automatically with each buyer's name when sending.</div>
+      </div>
+    </div>
+    <div class="compose-foot">
+      <span style="font-size:11px;color:var(--text3);flex:1">${n} buyer${n===1?'':'s'} selected</span>
+      <button class="btn btn-sm" onclick="copyBBEmailPreview()">📋 Copy</button>
+      <button class="btn btn-sm btn-gold" onclick="openBBSendModal()">📧 Send to ${n||'…'}</button>
+    </div>`;
+}
+
+function generateBBSubject() {
+  return 'Buy Box Request — What Are Your Land Acquisition Criteria?';
+}
+
+function generateBBBody(buyer) {
+  loadMyInfo();
+  const mi = myInfo;
+  const contactName = buyer.contact
+    ? buyer.contact.split('—')[0].split('-')[0].trim()
+    : buyer.name;
+  const areaStr = [
+    (buyer.counties||[]).join(', '),
+    buyer.state
+  ].filter(Boolean).join(', ');
+
+  return `Hi ${contactName},
+
+I hope you're doing well. I am actively sourcing off-market land deals and wanted to reach out to make sure I have your current buy box criteria on file so I can send you only the deals that fit your acquisition model.
+
+Could you take a moment to fill in the details below and reply to this email? I will keep this on file and match deals to your criteria going forward.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUY BOX CRITERIA — PLEASE CONFIRM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Target Markets
+  Zip Codes:                 [ List all zip codes you actively buy in ]
+  Counties / Areas:          [ e.g. Lee County, Cape Coral, Fort Myers ]
+
+Zoning
+  Preferred Zoning Types:    [ e.g. RSF-1, RM-2, C-1, AG, Mixed-use ]
+  Zoning to Avoid:           [ Any specific zones you will not buy? ]
+
+Flood Zone
+  Acceptable Flood Zones:    [ e.g. Zone X only · AE okay with mitigation · No restriction ]
+
+Protective Species
+  Species / Habitat Issues:  [ Any to avoid? e.g. Gopher tortoise, Scrub jay, Wetlands ]
+
+Road Frontage
+  Main Road Frontage:        [ OK / Not OK / Depends on price ]
+  Paved Road Required:       [ Yes / No ]
+
+Lot Criteria
+  Minimum Lot Size:          [ e.g. 5,000 SF / 0.25 ac ]
+  Maximum Lot Size:          [ e.g. 40,000 SF / 1 ac ]
+
+Budget & Closing
+  Price Range Per Lot:       [ e.g. $30K–$90K ]
+  Closing Timeline:          [ e.g. 30 days / 60 days ]
+  Purchase Method:           [ Cash / Financing / Flexible ]
+
+Anything Else
+  [ Corner lots, utilities required, specific subdivisions, etc. ]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I am consistently sourcing deals in ${areaStr||'your target markets'} and want to make sure we are always aligned. Looking forward to your reply.
+
+Best regards,
+
+${mi.name||'Christopher Fuchs'}
+${mi.company||'Fuchsmonte Holding LLC'}
+📞 ${mi.phone||'7866090266'}
+📧 ${mi.email||'Fuchsbchristopher@gmail.com'}${mi.website?'\n🌐 '+mi.website:''}
+
+──────────────────────────────────
+Fuchsmonte Holding LLC
+${mi.email||'Fuchsbchristopher@gmail.com'}
+${mi.phone||'7866090266'}`;
+}
+
+function copyBBEmailPreview() {
+  const s = document.getElementById('bb-email-subject')?.value||'';
+  const b = document.getElementById('bb-email-body')?.value||'';
+  navigator.clipboard.writeText('Subject: '+s+'\n\n'+b)
+    .then(()=>toast('Email copied to clipboard',true))
+    .catch(()=>toast('Copy failed'));
+}
+
+function openBBSendModal() {
+  if (!selBBBuyers.size) { toast('Select at least one buyer first'); return; }
+  const subject      = document.getElementById('bb-email-subject')?.value || generateBBSubject();
+  const selBuyerObjs = buyers.filter(b=>selBBBuyers.has(String(b.id)));
+
+  const subEl = document.getElementById('bb-acq-modal-sub');
+  if (subEl) subEl.textContent = selBuyerObjs.length + ' recipient' + (selBuyerObjs.length===1?'':'s');
+
+  document.getElementById('bb-acq-modal-body').innerHTML = selBuyerObjs.map(b => {
+    const body = generateBBBody(b);
+    const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1'
+      + '&to='   + encodeURIComponent(b.email||'')
+      + '&su='   + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(body);
+    return `<div class="send-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:12px;font-weight:600">${b.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${b.email||'<span style="color:var(--red)">No email on file — edit buyer to add</span>'}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          ${b.email
+            ? `<a href="${gmailUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-gold" style="text-decoration:none">📧 Open in Gmail</a>`
+            : '<span style="font-size:11px;color:var(--text3)">No email</span>'}
+          <button class="btn btn-sm" onclick="copyBBBuyerEmail('${escHtml(String(b.id))}','${escHtml(subject)}')">📋 Copy</button>
+        </div>
+      </div>
+      <pre>${escHtml(body.slice(0,600))}${body.length>600?'\n…(truncated)':''}</pre>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bb-acq-send-modal').classList.add('open');
+}
+
+function closeBBSendModal() { document.getElementById('bb-acq-send-modal').classList.remove('open'); }
+
+function copyBBBuyerEmail(buyerId, subject) {
+  const buyer = buyers.find(b=>String(b.id)===String(buyerId));
+  if (!buyer) return;
+  const body = generateBBBody(buyer);
+  navigator.clipboard.writeText('To: '+(buyer.email||'')+'\nSubject: '+subject+'\n\n'+body)
+    .then(()=>toast('Copied: '+buyer.name, true))
+    .catch(()=>toast('Copy failed'));
 }
 
 // ════════════════════════════════════════════
