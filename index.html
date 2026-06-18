@@ -902,12 +902,16 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
   font-family:'Playfair Display',serif;font-weight:600;font-size:14px;color:var(--gold);
 }
 .fm-web-bubble{
-  position:absolute;transform:translate(-50%,-50%);max-width:120px;text-align:center;
+  position:absolute;transform:translate(-50%,-50%);max-width:150px;text-align:center;
   background:var(--paper);border:1px solid var(--stone);border-radius:8px;
   padding:9px 11px;font-size:11.5px;color:var(--charcoal);line-height:1.35;font-family:'Montserrat',sans-serif;
 }
-.fm-web-bubble input{border:none;background:transparent;text-align:center;width:100%;color:inherit;font:inherit;font-size:11.5px;}
-.fm-web-bubble input:focus{outline:none;}
+.fm-web-bubble textarea{
+  border:none;background:transparent;text-align:center;width:100%;color:inherit;
+  font:inherit;font-size:11.5px;line-height:inherit;resize:none;overflow:hidden;
+  display:block;padding:0;margin:0;word-wrap:break-word;
+}
+.fm-web-bubble textarea:focus{outline:none;}
 .fm-web-bubble-remove{
   position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;
   background:var(--cream);border:1px solid var(--stone);color:var(--slate-soft);
@@ -1250,9 +1254,9 @@ tr.dr:hover td{background:var(--bg3);cursor:pointer}
     </div>
   </div>
   <div class="topbar-center">
-    <button class="top-tab active" onclick="switchPage('pipeline',this)">&#9646; Pipeline</button>
-    <button class="top-tab" onclick="switchPage('buyers',this)">&#128101; Buyer CRM</button>
-    <button class="top-tab" onclick="switchPage('outreach',this)">&#128228; Outreach</button>
+    <button class="top-tab active" id="tab-pipeline" onclick="switchPage('pipeline',this)">&#9646; Pipeline</button>
+    <button class="top-tab" id="tab-buyers" onclick="switchPage('buyers',this)">&#128101; Buyer CRM</button>
+    <button class="top-tab" id="tab-outreach" onclick="switchPage('outreach',this)">&#128228; Outreach</button>
     <button class="top-tab admin-only" id="tab-settings" onclick="switchPage('settings',this)">⚙ Settings</button>
   </div>
   <div class="topbar-right">
@@ -1822,6 +1826,12 @@ let leads=[], buyers=[], selId=null, editLId=null, editBId=null, sortCol=null, s
 let deletedBuyerIds = []; // tracks removed built-in buyers so they stay gone on reload
 let pipeState='', pipeCounty='', buyerState='', buyerCounty='';
 let currentPage = 'pipeline';
+
+// ── Remember which page/view was open, so a refresh lands back where you were ──
+// Purely local (per-browser) — there's no reason "which tab was open" needs to sync across devices.
+const LAST_VIEW_KEY = 'fm_last_view';
+function saveLastView(view) { try { localStorage.setItem(LAST_VIEW_KEY, view); } catch(e) {} }
+function getLastView() { try { return localStorage.getItem(LAST_VIEW_KEY); } catch(e) { return null; } }
 
 // ═══════════════════════════════════════════
 // ═══ FIX 1: Buyer ID — use timestamp-based IDs, never reset ═══
@@ -3066,6 +3076,7 @@ function delBuyer(id){
 // ═══════════════════════════════════════════
 function switchPage(page, btn) {
   currentPage=page;
+  saveLastView(page);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -3617,7 +3628,7 @@ function showLoginFromPublic() {
 function enterDashboardDirect() {
   document.getElementById('public-page').style.display  = 'none';
   document.getElementById('login-screen').style.display = 'none';
-  showMainMenu();
+  goToView(getLastView());
 }
 
 function backToHomepage() {
@@ -3679,16 +3690,17 @@ async function doLogin() {
     document.getElementById('login-pass').value='';
     return;
   }
-  currentUser = { username:APP_USERNAME, name:'Christopher Fuchs', role:'admin' };
+  currentUser = { username:APP_USERNAME, name:'CEO', role:'admin' };
   sessionStorage.setItem('fm_session',JSON.stringify(currentUser));
   errEl.textContent='';
   document.getElementById('login-screen').style.display='none';
-  showMainMenu();
+  goToView(getLastView());
 }
 
 function logout() {
   currentUser=null;
   sessionStorage.removeItem('fm_session');
+  try { localStorage.removeItem(LAST_VIEW_KEY); } catch(e) {}
   // Hide everything, return to public landing page
   document.getElementById('main-menu').style.display  = 'none';
   document.querySelector('.topbar').style.display      = 'none';
@@ -3703,7 +3715,17 @@ function logout() {
 }
 
 function checkSession() {
-  try { const s=sessionStorage.getItem('fm_session'); if(s){currentUser=JSON.parse(s);return true;} } catch(e){}
+  try {
+    const s=sessionStorage.getItem('fm_session');
+    if(s){
+      currentUser=JSON.parse(s);
+      if(currentUser && currentUser.name==='Christopher Fuchs'){
+        currentUser.name='CEO';
+        sessionStorage.setItem('fm_session',JSON.stringify(currentUser));
+      }
+      return true;
+    }
+  } catch(e){}
   return false;
 }
 
@@ -3712,6 +3734,7 @@ function showMainMenu() {
   document.querySelector('.topbar').style.display='none';
   document.querySelector('.app').style.display='none';
   document.getElementById('main-menu').style.display='flex';
+  saveLastView('menu');
   // Update greeting
   const name = currentUser?.name || currentUser?.username || 'there';
   const firstName = name.split(' ')[0];
@@ -3734,6 +3757,7 @@ function openDashboard(which) {
     document.getElementById('buyer-nav').style.display='none';
     document.getElementById('outreach-nav').style.display='none';
     currentPage='s8';
+    saveLastView('s8');
     return;
   }
   if (which==='roadmap') {
@@ -3747,6 +3771,7 @@ function openDashboard(which) {
     document.getElementById('buyer-nav').style.display='none';
     document.getElementById('outreach-nav').style.display='none';
     currentPage='roadmap';
+    saveLastView('roadmap');
     return;
   }
   if (which==='settings') {
@@ -3760,6 +3785,7 @@ function openDashboard(which) {
     document.getElementById('buyer-nav').style.display='none';
     document.getElementById('outreach-nav').style.display='none';
     currentPage='settings';
+    saveLastView('settings');
     renderSettingsPage();
     return;
   }
@@ -3777,6 +3803,22 @@ function applyRoleUI() {
   document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=isAdmin?'':'none'; });
   const topbarUser = document.getElementById('topbar-user');
   if (topbarUser) topbarUser.textContent = currentUser?.name || currentUser?.username || '';
+}
+
+// ── Restore whichever page/tab was open before a refresh (or before closing the browser) ──
+function goToView(view) {
+  if (!view || view === 'menu') { showMainMenu(); return; }
+  if (view === 's8' || view === 'roadmap' || view === 'settings') { openDashboard(view); return; }
+  if (view === 'pipeline' || view === 'buyers' || view === 'outreach') {
+    document.getElementById('main-menu').style.display = 'none';
+    document.querySelector('.topbar').style.display = 'flex';
+    document.querySelector('.app').style.display = 'flex';
+    const btn = document.getElementById('tab-'+view) || document.querySelector('.top-tab');
+    switchPage(view, btn);
+    applyRoleUI();
+    return;
+  }
+  showMainMenu(); // unrecognized saved value — fall back safely
 }
 
 async function restoreAllBuyers() {
@@ -4241,21 +4283,22 @@ async function deleteBMFile(id) {
 // INIT
 // ═══════════════════════════════════════════
 (async () => {
-  // ══ ALWAYS show public landing page first ══
-  // Dashboard/login are hidden until explicitly navigated to
+  // ══ Show public landing page by default; skip it entirely if a session is already active ══
   document.getElementById('public-page').style.display = 'flex';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-menu').style.display    = 'none';
   document.querySelector('.topbar').style.display       = 'none';
   document.querySelector('.app').style.display          = 'none';
 
-  // ── If session already exists, update nav button to skip login ──
+  // ── If session already exists, skip the public page and land directly back on whichever page/tab was last open ──
   if (checkSession()) {
     const btn = document.querySelector('.pnav-login');
     if (btn) {
       btn.textContent = 'Enter Dashboard →';
       btn.onclick = enterDashboardDirect;
     }
+    document.getElementById('public-page').style.display = 'none';
+    goToView(getLastView());
   }
 
   // ── Pre-load dashboard data in background ──
@@ -4272,7 +4315,13 @@ async function deleteBMFile(id) {
   } else {
     document.getElementById('sync-info').textContent = 'No data';
   }
-  buildTerNav(); buildBuyerNav(); renderPipeline();
+  // Re-render whichever page is actually showing now that data has finished loading
+  // (matters when a refresh restored straight into Buyers/Outreach/Settings rather than Pipeline)
+  buildTerNav(); buildBuyerNav();
+  if (currentPage === 'buyers') { renderBuyers(); renderBuyBoxFiles(); }
+  else if (currentPage === 'outreach') { renderOutreachPage(); }
+  else if (currentPage === 'settings') { renderSettingsPage(); }
+  else { renderPipeline(); }
 })();
 </script>
 
@@ -4505,14 +4554,16 @@ async function deleteBMFile(id) {
         bubble.style.top=y+'px';
 
         if(editMode){
-          var input=document.createElement('input');
-          input.type='text';
+          var input=document.createElement('textarea');
+          input.rows=1;
           input.value=d.ideas[i];
           input.placeholder='Idea...';
+          var autoGrow=function(){ input.style.height='auto'; input.style.height=input.scrollHeight+'px'; };
           (function(idx){
-            input.addEventListener('input',function(){ d.ideas[idx]=input.value; scheduleRoadmapSave(); });
+            input.addEventListener('input',function(){ d.ideas[idx]=input.value; autoGrow(); scheduleRoadmapSave(); });
           })(i);
           bubble.appendChild(input);
+          requestAnimationFrame(autoGrow);
 
           var rm=document.createElement('button');
           rm.type='button';
